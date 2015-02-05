@@ -19,7 +19,7 @@ class OnlineHandler(RequestHandler):
 	@coroutine
 	def login(self, username, password):
 		r = yield self.client.fetch(self.loginUrl)
-		d = PyQuery(r.body.decode(errors='ignore'))
+		d = PyQuery(r.body.decode('utf-8', 'ignore'))
 
 		#login
 		postData = {
