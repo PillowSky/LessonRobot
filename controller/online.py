@@ -1,8 +1,8 @@
-import requests
 from urllib import urlencode
+from Cookie import SimpleCookie
 from tornado.gen import coroutine
 from tornado.web import RequestHandler
-from tornado.httpclient import AsyncHTTPClient, HTTPRequest, HTTPError
+from tornado.httpclient import AsyncHTTPClient, HTTPError
 from pyquery import PyQuery
 
 class OnlineHandler(RequestHandler):
@@ -15,7 +15,6 @@ class OnlineHandler(RequestHandler):
 
 	def initialize(self):
 		self.client = AsyncHTTPClient()
-		self.session = requests.Session()
 
 	@coroutine
 	def login(self, username, password):
@@ -33,10 +32,23 @@ class OnlineHandler(RequestHandler):
 			"ctl05$LoginButton.x": 36,
 			"ctl05$LoginButton.y": 10
 		}
-		r = self.session.post(self.loginUrl, data=postData, allow_redirects=False)
+		try:
+			r = yield self.client.fetch(self.loginUrl, method='POST', body=urlencode(postData), follow_redirects=False)
+		except HTTPError as e:
+			if e.code == 302:
+				r = e.response
+			else:
+				raise NotImplementedError('TODO')
 
 		#kick
-		if 'confirm' in r.text:
-			self.session.get(self.kickUrl + str(username), allow_redirects=False)
-		
-		self.cookieString = urlencode(self.session.cookies).replace('&', '; ')
+		if 'confirm' in r.body:
+			try:
+				r = yield self.client.fetch(self.kickUrl + str(username), follow_redirects=False)
+			except HTTPError as e:
+				if e.code == 302:
+					r = e.response
+				else:
+					raise NotImplementedError('TODO')
+
+		cookieJar = SimpleCookie(r.headers['Set-Cookie'].replace('path=/,', 'path=/;').replace('HttpOnly,', 'HttpOnly;'))
+		self.cookieString = '; '.join(['%s=%s' % (item.key, item.value) for item in cookieJar.itervalues()])

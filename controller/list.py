@@ -1,4 +1,3 @@
-import requests
 from urllib import urlencode
 from tornado.gen import coroutine
 from tornado.httpclient import AsyncHTTPClient, HTTPRequest, HTTPError
