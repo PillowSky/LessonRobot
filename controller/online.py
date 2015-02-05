@@ -9,6 +9,7 @@ class OnlineHandler(RequestHandler):
 	loginUrl = 'http://www.sygj.org.cn/login.aspx?from=changeuser'
 	kickUrl = 'http://www.sygj.org.cn/Login.aspx?Kick=True&UserId='
 	courseListUrl = 'http://www.sygj.org.cn/Course/Default.aspx'
+	myUrl = 'http://www.sygj.org.cn/my/Default.aspx'
 	courseUrl = 'http://www.sygj.org.cn/course/Course.aspx?id='
 	playUrl = 'http://www.sygj.org.cn/play/play.aspx?course_id='
 	progressUrl = 'http://www.sygj.org.cn/play/AICCProgressNew.ashx'

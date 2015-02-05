@@ -1,6 +1,7 @@
 # -*- Mode: Python; coding: utf-8; indent-tabs-mode: t; c-basic-offset: 4; tab-width: 4 -*-
 
 from urllib import urlencode
+from urlparse import parse_qs, urlparse
 from tornado.gen import coroutine
 from tornado.httpclient import AsyncHTTPClient, HTTPRequest, HTTPError
 from pyquery import PyQuery
@@ -14,19 +15,28 @@ class ListHandler(OnlineHandler):
 
 		yield self.login(username, password)
 
-		#request first page
-		courseList = {}
-		def extract(i, e):
+		#request first coursepage and mypage
+		courseTable = {}
+		def extractList(i, e):
+			if i > 0:
+				d = PyQuery(e)
+				id = parse_qs(urlparse(d('a').attr('href')).query)['id'][0]
+				name = d('a').attr('title')
+				status = d('td:last-child').text()
+				courseTable[id] = [name, status]
+
+		def extractMy(i, e):
 			d = PyQuery(e)
-			key = d('a').attr('title')
-			value = d('td:last-child').text()
-			if key and value:
-				courseList[d('a').attr('title')] = d('td:last-child').text()
+			id = parse_qs(urlparse(d('a').attr('href')).query)['id'][0]
+			courseTable[id][1] = u'正在学习'
 
-		r = yield self.client.fetch(self.courseListUrl, headers={'Cookie': self.cookieString})
+		firstReq = HTTPRequest(self.courseListUrl, headers={'Cookie': self.cookieString})
+		myReq = HTTPRequest(self.myUrl, headers={'Cookie': self.cookieString})
 
-		d = PyQuery(r.body.decode('utf-8', 'ignore'))
-		d('#ctl10_gvCourse tr').each(extract)
+		firstRes, myRes = yield [self.client.fetch(firstReq), self.client.fetch(myReq)]
+
+		d = PyQuery(firstRes.body.decode('utf-8', 'ignore'))
+		d('#ctl10_gvCourse tr').each(extractList)
 
 		#request later page
 		pageText = d('[style="float:left;width:40%;"]').text()
@@ -44,10 +54,20 @@ class ListHandler(OnlineHandler):
 				'selectSearch': 'txtKeyword',
 				'ctl10$HFID': ''
 			}
-			pageRequest.append(HTTPRequest(self.courseListUrl, method='POST', headers={'Cookie': self.cookieString}, body=urlencode(postData)))
+			batchRequest.append(HTTPRequest(self.courseListUrl, method='POST', headers={'Cookie': self.cookieString}, body=urlencode(postData)))
 
-		batchResponse = yield [self.client.fetch(req) for req in pageRequest]
+		batchResponse = yield [self.client.fetch(req) for req in batchRequest]
 
 		for r in batchResponse:
 			d = PyQuery(r.body.decode('utf-8', 'ignore'))
-			d('#ctl10_gvCourse tr').each(extract)
+			d('#ctl10_gvCourse tr').each(extractList)
+		
+		#process myPage at last
+		d = PyQuery(myRes.body.decode('utf-8', 'ignore'))
+		d('#MyCourseList li.list4 a').each(extractMy)
+		name = d('#UCUserLogin b').text()
+		score = d('#UCUserLogin li:nth-child(6)').text().split(' ')[-1]
+
+		print(name)
+		print(score)
+		print(len(courseTable))
