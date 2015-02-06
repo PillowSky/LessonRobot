@@ -17,7 +17,7 @@ class ListHandler(BaseHandler):
 
 		yield self.login(username, password)
 
-		#request first coursepage and mypage
+		#request first course page and mypage
 		courseTable = {}
 		def extractList(i, e):
 			if i > 0:
@@ -36,7 +36,7 @@ class ListHandler(BaseHandler):
 			courseID = int(parse_qs(urlparse(d('a').attr('href')).query)['id'][0])
 			courseTable[courseID][1] = 1
 
-		firstRes, myRes = yield [self.client.fetch(self.courseListUrl, headers=self.cookieHeader), self.client.fetch(self.myUrl, headers=self.cookieHeader)]
+		firstRes, myCourseRes, myRes = yield [self.client.fetch(self.courseListUrl, headers=self.cookieHeader), self.client.fetch(self.myCourseUrl, headers=self.cookieHeader), self.client.fetch(self.myUrl, headers=self.cookieHeader)]
 
 		d = PyQuery(firstRes.body.decode('utf-8', 'ignore'))
 		d('#ctl10_gvCourse tr').each(extractList)
@@ -64,9 +64,9 @@ class ListHandler(BaseHandler):
 		for r in batchResponse:
 			d = PyQuery(r.body.decode('utf-8', 'ignore'))
 			d('#ctl10_gvCourse tr').each(extractList)
-		
-		#process myPage at last
-		d = PyQuery(myRes.body.decode('utf-8', 'ignore'))
+
+		#process myCourse at last
+		d = PyQuery(myCourseRes.body.decode('utf-8', 'ignore'))
 		d('#MyCourseList li.list4 a').each(extractMy)
 
 		done, now, no = [0, 0, 0]
@@ -78,6 +78,7 @@ class ListHandler(BaseHandler):
 			elif status[1] == 1:
 				now += 1
 
+		d = PyQuery(myRes.body.decode('utf-8', 'ignore'))
 		info = {
 			'name': d('#UCUserLogin b').text(),
 			'score': d('#UCUserLogin li:nth-child(6)').text().split(' ')[-1],
