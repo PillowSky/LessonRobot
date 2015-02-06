@@ -8,5 +8,4 @@ application = Application(
 	static_path = 'static',
 	login_url = '/login',
 	cookie_secret = cookie_secret,
-	debug = True,
 )

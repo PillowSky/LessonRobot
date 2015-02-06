@@ -1,10 +1,10 @@
 #!/bin/bash
 # compile
-coffee --compile js/*.coffee
-lessc -x css/style.less css/style.css
-jade *.jade
+coffee --compile static/js/*.coffee
+lessc -x static/css/style.less static/css/style.css
+jade view/*.jade
 
 # compress
-uglifyjs js/script.js --mangle --compress --screw-ie8 -o js/script.js
+uglifyjs static/js/script.js --mangle --compress --screw-ie8 -o static/js/script.js
 
 echo "The files are ready to deploy."
