@@ -4,7 +4,7 @@ from urllib import urlencode
 from urlparse import parse_qs, urlparse
 from tornado.gen import coroutine
 from tornado.web import authenticated
-from tornado.httpclient import AsyncHTTPClient, HTTPRequest, HTTPError
+from tornado.httpclient import HTTPRequest
 from pyquery import PyQuery
 from controller.base import BaseHandler
 

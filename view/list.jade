@@ -11,6 +11,8 @@ html
 	body
 		div#sideBar
 			ul(class="list-group")
+				li(class="list-group-item")
+					b LessonRobot Summary
 				li(class="list-group-item") 姓名: 
 					b {{info['name']}}
 				li(class="list-group-item") 获得学时: 
@@ -44,7 +46,7 @@ html
 						td 
 							button(type="button" class="btn btn-primary") 尚未学习
 						{% elif course[2] == 2 %}
-						td 学习完成
+						td 已经学习
 						{% elif course[2] == 1 %}
 						td 
 							button(type="button" class="btn btn-info") 正在学习

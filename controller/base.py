@@ -1,3 +1,5 @@
+# -*- Mode: Python; coding: utf-8; indent-tabs-mode: t; c-basic-offset: 4; tab-width: 4 -*-
+
 from urllib import urlencode
 from Cookie import SimpleCookie
 from tornado.gen import coroutine, Return
@@ -59,21 +61,15 @@ class BaseHandler(RequestHandler):
 		try:
 			r = yield self.client.fetch(self.loginUrl, method='POST', body=urlencode(postData), follow_redirects=False)
 		except HTTPError as e:
-			if e.code == 302:
-				r = e.response
-			else:
-				raise NotImplementedError('TODO')
-
-		raise Return(r)
+			r = e.response
+		finally:
+			raise Return(r)
 
 	@coroutine
 	def kick(self, username):
 		try:
 			r = yield self.client.fetch(self.kickUrl + str(username), follow_redirects=False)
 		except HTTPError as e:
-			if e.code == 302:
-				r = e.response
-			else:
-				raise NotImplementedError('TODO')
-
-		raise Return(r)
+			r = e.response
+		finally:
+			raise Return(r)
