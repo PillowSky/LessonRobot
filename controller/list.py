@@ -3,15 +3,17 @@
 from urllib import urlencode
 from urlparse import parse_qs, urlparse
 from tornado.gen import coroutine
+from tornado.web import authenticated
 from tornado.httpclient import AsyncHTTPClient, HTTPRequest, HTTPError
 from pyquery import PyQuery
-from controller.online import OnlineHandler
+from controller.base import BaseHandler
 
-class ListHandler(OnlineHandler):
+class ListHandler(BaseHandler):
+	@authenticated
 	@coroutine
 	def get(self):
-		username = self.get_argument('username')
-		password = self.get_argument('password')
+		username = self.get_secure_cookie('username')
+		password = self.get_secure_cookie('password')
 
 		yield self.login(username, password)
 

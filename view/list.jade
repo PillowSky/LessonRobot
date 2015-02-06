@@ -13,7 +13,7 @@ html
 			ul(class="list-group")
 				li(class="list-group-item") 姓名: 
 					b {{info['name']}}
-				li(class="list-group-item") 当前获得学时: 
+				li(class="list-group-item") 获得学时: 
 					b {{info['score']}}
 				li(class="list-group-item") 学时排名: 
 					b {{info['rank']}}
@@ -25,7 +25,8 @@ html
 					b {{info['now']}}
 				li(class="list-group-item") 未学课程数: 
 					b {{info['no']}}	
-				li(class="list-group-item") 退出
+				li(class="list-group-item")
+					button#logout(type="button" class="btn btn-default btn-block") 退出
 
 		div#infoBoard
 			table(class="table table-bordered table-striped table-hover")
