@@ -22,21 +22,21 @@ class ListHandler(BaseHandler):
 		def extractList(i, e):
 			if i > 0:
 				d = PyQuery(e)
-				id = int(parse_qs(urlparse(d('a').attr('href')).query)['id'][0])
+				courseID = int(parse_qs(urlparse(d('a').attr('href')).query)['id'][0])
 				name = d('a').attr('title')
 				status = d('td:last-child').text()
 				if status == u'已选':
 					status = 2
 				elif status == u'点击进入':
 					status = 0
-				courseTable[id] = [name, status]
+				courseTable[courseID] = [name, status]
 
 		def extractMy(i, e):
 			d = PyQuery(e)
-			id = int(parse_qs(urlparse(d('a').attr('href')).query)['id'][0])
-			courseTable[id][1] = 1
+			courseID = int(parse_qs(urlparse(d('a').attr('href')).query)['id'][0])
+			courseTable[courseID][1] = 1
 
-		firstRes, myRes = yield [self.client.fetch(self.courseListUrl, headers={'Cookie': self.cookieString}), self.client.fetch(self.myUrl, headers={'Cookie': self.cookieString})]
+		firstRes, myRes = yield [self.client.fetch(self.courseListUrl, headers=self.cookieHeader), self.client.fetch(self.myUrl, headers=self.cookieHeader)]
 
 		d = PyQuery(firstRes.body.decode('utf-8', 'ignore'))
 		d('#ctl10_gvCourse tr').each(extractList)
@@ -57,7 +57,7 @@ class ListHandler(BaseHandler):
 				'selectSearch': 'txtKeyword',
 				'ctl10$HFID': ''
 			}
-			batchRequest.append(HTTPRequest(self.courseListUrl, method='POST', headers={'Cookie': self.cookieString}, body=urlencode(postData)))
+			batchRequest.append(HTTPRequest(self.courseListUrl, method='POST', headers=self.cookieHeader, body=urlencode(postData)))
 
 		batchResponse = yield [self.client.fetch(req) for req in batchRequest]
 
@@ -88,6 +88,6 @@ class ListHandler(BaseHandler):
 			'no': no,
 		}
 
-		courseList = [[id, value[0], value[1]] for id, value in courseTable.iteritems()]
+		courseList = [[name, value[0], value[1]] for name, value in courseTable.iteritems()]
 		courseList.sort(None, None, True)
 		self.render('list.html', info=info, courseList=courseList)

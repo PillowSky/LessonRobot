@@ -8,10 +8,11 @@ from tornado.httpclient import AsyncHTTPClient, HTTPError
 from pyquery import PyQuery
 
 class BaseHandler(RequestHandler):
+	domainUrl = 'http://www.sygj.org.cn/'
 	loginUrl = 'http://www.sygj.org.cn/login.aspx?from=changeuser'
 	kickUrl = 'http://www.sygj.org.cn/Login.aspx?Kick=True&UserId='
 	courseListUrl = 'http://www.sygj.org.cn/Course/Default.aspx'
-	myUrl = 'http://www.sygj.org.cn/my/Default.aspx'
+	myUrl = 'http://www.sygj.org.cn/my/MyCourse.aspx?type=1'
 	courseUrl = 'http://www.sygj.org.cn/course/Course.aspx?id='
 	playUrl = 'http://www.sygj.org.cn/play/play.aspx?course_id='
 	progressUrl = 'http://www.sygj.org.cn/play/AICCProgressNew.ashx'
@@ -39,7 +40,9 @@ class BaseHandler(RequestHandler):
 			r = yield self.kick(username)
 
 		cookieJar = SimpleCookie(r.headers['Set-Cookie'].replace('path=/,', 'path=/;').replace('HttpOnly,', 'HttpOnly;'))
-		self.cookieString = '; '.join(['%s=%s' % (item.key, item.value) for item in cookieJar.itervalues()])
+		cookieString = '; '.join(['%s=%s' % (item.key, item.value) for item in cookieJar.itervalues()])
+		self.cookieHeader = {'Cookie': cookieString}
+		self.cookieReferHeader = {'Cookie': cookieString, 'Referer': self.domainUrl}
 
 	@coroutine
 	def tryLogin(self, username, password):
