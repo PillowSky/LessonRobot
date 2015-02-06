@@ -20,20 +20,21 @@ class ListHandler(OnlineHandler):
 		def extractList(i, e):
 			if i > 0:
 				d = PyQuery(e)
-				id = parse_qs(urlparse(d('a').attr('href')).query)['id'][0]
+				id = int(parse_qs(urlparse(d('a').attr('href')).query)['id'][0])
 				name = d('a').attr('title')
 				status = d('td:last-child').text()
+				if status == u'已选':
+					status = 2
+				elif status == u'点击进入':
+					status = 0
 				courseTable[id] = [name, status]
 
 		def extractMy(i, e):
 			d = PyQuery(e)
-			id = parse_qs(urlparse(d('a').attr('href')).query)['id'][0]
-			courseTable[id][1] = u'正在学习'
+			id = int(parse_qs(urlparse(d('a').attr('href')).query)['id'][0])
+			courseTable[id][1] = 1
 
-		firstReq = HTTPRequest(self.courseListUrl, headers={'Cookie': self.cookieString})
-		myReq = HTTPRequest(self.myUrl, headers={'Cookie': self.cookieString})
-
-		firstRes, myRes = yield [self.client.fetch(firstReq), self.client.fetch(myReq)]
+		firstRes, myRes = yield [self.client.fetch(self.courseListUrl, headers={'Cookie': self.cookieString}), self.client.fetch(self.myUrl, headers={'Cookie': self.cookieString})]
 
 		d = PyQuery(firstRes.body.decode('utf-8', 'ignore'))
 		d('#ctl10_gvCourse tr').each(extractList)
@@ -65,9 +66,26 @@ class ListHandler(OnlineHandler):
 		#process myPage at last
 		d = PyQuery(myRes.body.decode('utf-8', 'ignore'))
 		d('#MyCourseList li.list4 a').each(extractMy)
-		name = d('#UCUserLogin b').text()
-		score = d('#UCUserLogin li:nth-child(6)').text().split(' ')[-1]
 
-		print(name)
-		print(score)
-		print(len(courseTable))
+		done, now, no = [0, 0, 0]
+		for status in courseTable.itervalues():
+			if status[1] == 0:
+				no += 1
+			elif status[1] == 2:
+				done += 1
+			elif status[1] == 1:
+				now += 1
+
+		info = {
+			'name': d('#UCUserLogin b').text(),
+			'score': d('#UCUserLogin li:nth-child(6)').text().split(' ')[-1],
+			'rank': d('#UCUserLogin li:nth-child(8)').text().split(' ')[-1],
+			'total': len(courseTable),
+			'done': done,
+			'now': now,
+			'no': no,
+		}
+
+		courseList = [[id, value[0], value[1]] for id, value in courseTable.iteritems()]
+		courseList.sort(None, None, True)
+		self.render('list.html', info=info, courseList=courseList)
