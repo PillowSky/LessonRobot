@@ -17,7 +17,7 @@ $ ->
 			$.post '/learn', {"courseID": courseID}, (data)->
 				$(self).removeClass('btn-primary').removeClass('btn-info')
 				window.learning = false
-				if data == ('ok')
+				if data == 'ok'
 					$(self).addClass('btn-success').text('学习成功')
 				else
 					$(self).removeClass('disabled').addClass('btn-warning').text('重新学习')
