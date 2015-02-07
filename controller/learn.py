@@ -51,7 +51,7 @@ class LearnHandler(BaseHandler):
 			"courseID": courseID,
 			"userID": username
 		}
-		r, d = yield [self.client.fetch(self.courseUrl + str(courseID), headers=self.cookieHeader), self.client.fetch(self.progressUrl, method='POST', headers=self.cookieReferHeader, body=urlencode(postData))]
+		r, d = yield [self.client.fetch(self.courseUrl + str(courseID), headers=self.cookieHeader), self.client.fetch(self.progressUrl, method='POST', headers=self.cookieHeader, body=urlencode(postData))]
 
 		d = PyQuery(r.body.decode('utf-8', 'ignore'))
 		sidList = d('.table2 table td:last-child').text().split(' ')
@@ -71,7 +71,7 @@ class LearnHandler(BaseHandler):
 				'courseID': courseID,
 				'userID': username
 			}
-			r = yield self.client.fetch(self.progressUrl, method='POST', headers=self.cookieReferHeader, body=urlencode(postData))
+			r = yield self.client.fetch(self.progressUrl, method='POST', headers=self.cookieHeader, body=urlencode(postData))
 
 			yield Task(IOLoop.instance().add_timeout, unitDelta)
 
@@ -86,7 +86,7 @@ class LearnHandler(BaseHandler):
 				'courseID': courseID,
 				'userID': username
 			}
-			r = yield self.client.fetch(self.progressUrl, method='POST', headers=self.cookieReferHeader, body=urlencode(postData))
+			r = yield self.client.fetch(self.progressUrl, method='POST', headers=self.cookieHeader, body=urlencode(postData))
 
 		if 'null' in r.body:
 			self.write('ok')

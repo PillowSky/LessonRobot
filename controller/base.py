@@ -6,6 +6,7 @@ from tornado.gen import coroutine, Return
 from tornado.web import RequestHandler
 from tornado.httpclient import AsyncHTTPClient, HTTPError
 from pyquery import PyQuery
+from service.kvdb import kvdb
 
 class BaseHandler(RequestHandler):
 	domainUrl = 'http://www.sygj.org.cn/'
@@ -35,15 +36,25 @@ class BaseHandler(RequestHandler):
 
 	@coroutine
 	def login(self, username, password):
-		r = yield self.tryLogin(username, password)
+		cookieString = kvdb.get(username)
 
-		if 'confirm' in r.body:
-			r = yield self.kick(username)
+		if cookieString:
+			self.cookieHeader = {'Cookie': cookieString, 'Referer': self.domainUrl}
+			try:
+				r = yield self.client.fetch(self.myUrl, headers=self.cookieHeader, follow_redirects=False)
+			except HTTPError as e:
+				cookieString = None
 
-		cookieJar = SimpleCookie(r.headers['Set-Cookie'].replace('path=/,', 'path=/;').replace('HttpOnly,', 'HttpOnly;'))
-		cookieString = '; '.join(['%s=%s' % (item.key, item.value) for item in cookieJar.itervalues()])
-		self.cookieHeader = {'Cookie': cookieString}
-		self.cookieReferHeader = {'Cookie': cookieString, 'Referer': self.domainUrl}
+		if not cookieString:
+			r = yield self.tryLogin(username, password)
+
+			if 'confirm' in r.body:
+				r = yield self.kick(username)
+
+			cookieJar = SimpleCookie(r.headers['Set-Cookie'].replace('path=/,', 'path=/;').replace('HttpOnly,', 'HttpOnly;'))
+			cookieString = '; '.join(['%s=%s' % (item.key, item.value) for item in cookieJar.itervalues()])
+			kvdb.set(username, cookieString)
+			self.cookieHeader = {'Cookie': cookieString, 'Referer': self.domainUrl}
 
 	@coroutine
 	def tryLogin(self, username, password):
