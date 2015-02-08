@@ -44,13 +44,13 @@ html
 						td {{course[0]}}
 						td {{course[1]}}
 						{% if course[2] == 0 %}
-						td 
+						td
 							button(type="button" class="btn btn-primary learnButton" target="{{course[0]}}") 尚未学习
 						{% elif course[2] == 2 %}
 						td 已经学习
 						{% elif course[2] == 1 %}
-						td 
-							button(type="button" class="btn btn-info learnButton" target="{{course[0]}}") 正在学习
+						td
+							button(type="button" class="btn btn-info learnButton" target="{{course[0]}}") 已选在学
 						{% end %}
 					{% end %}
 
