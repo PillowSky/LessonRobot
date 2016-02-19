@@ -15,29 +15,47 @@ img#logoBox{
 }
 
 #loginForm {
-	@media (orientation:landscape) {
-		width: 50%;
+	@media (min-width: 768px) and (max-width: 992px) {
+		width: 70%;
+	}
+	@media (min-width: 992px) {
+		width: 40%;
 	}
 	margin: 2% auto 0;
-	padding: 2rem;
 	background-color: white;
-	box-shadow: 0 0 0.5rem #CCC;
+	box-shadow: 0 0 1rem #AAA;
+	border-radius: 6px;
+	h2 {
+		padding-top: 2rem;
+		text-align: center;
+	}
 	input{
-		font-size: 2rem;
-		height: 4.5rem;
+		width: 100%;
+		font-size: 1.8rem;
+		height: 4rem;
+		border-radius: 0;
+		border: 0;
 	}
-	input[type="text"] {
+	input[name="username"] {
 		margin-top: 2rem;
-		border-bottom-right-radius: 0;
-		border-bottom-left-radius: 0;
 	}
-	input[type="password"] {
+	input[name="password"] {
 		margin-top: -1px;
-		border-top-left-radius: 0;
-		border-top-right-radius: 0;
+		border-radius: 0;
+	}
+	input[name="vcode"] {
+		display: inline-block;
+		width: 75%;
+		margin-top: -1px;
+	}
+	img#vcode {
+		display: inline-block;
+		width: 25%;
+		vertical-align: top;
 	}
 	button#submit{
-		margin: 3rem 0 2rem;
+		margin: 2rem 0 0;
+		border-radius: 0 0 6px 6px;
 	}
 }
 

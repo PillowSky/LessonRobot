@@ -15,13 +15,14 @@ html
 			img#logoBox(src="/static/img/logo.png")
 			form#loginForm(action="/login" method="post")
 				{% if error %}
-				div(class="alert alert-danger" role="alert") 账号密码有误
+				div(class="alert alert-danger" role="alert") 账号密码验证码有误
 				{% end %}
-				h2 登录 LessonRobot
+				h2.text-center LessonRobot
 				input(type="text" name="username" class="form-control" placeholder="账号" required autofocus)
 				input(type="password" name="password" class="form-control" placeholder="密码" required)
-
-				button(type="submit" id="submit" class="btn btn-lg btn-primary btn-block") 开始！
+				input(type="text" name="vcode" class="form-control" placeholder="验证码" required)
+				img#vcode(src="/vcode")
+				button(type="submit" id="submit" class="btn btn-lg btn-primary btn-block") 登录
 
 	script(src="http://lib.sinaapp.com/js/jquery/2.0.3/jquery-2.0.3.min.js")
 	script(src="http://lib.sinaapp.com/js/bootstrap/latest/js/bootstrap.min.js")

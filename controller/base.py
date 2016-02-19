@@ -18,6 +18,7 @@ class BaseHandler(RequestHandler):
 	courseUrl = 'http://www.sygj.org.cn/course/Course.aspx?id='
 	playUrl = 'http://www.sygj.org.cn/play/play.aspx?course_id='
 	progressUrl = 'http://www.sygj.org.cn/play/AICCProgressNew.ashx'
+	vcodeUrl = 'http://www.sygj.org.cn/inc/CodeImg.aspx'
 
 	def initialize(self):
 		self.client = AsyncHTTPClient()
