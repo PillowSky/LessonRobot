@@ -6,7 +6,7 @@ from controller.base import BaseHandler
 class VcodeHandler(BaseHandler):
 	@coroutine
 	def get(self):
-		r = yield self.client.fetch(self.vcodeUrl)
+		r = yield self.client.fetch(self.vcodeUrl, headers=self.cookieHeader)
 		self.set_status(r.code)
 
 		for name, value in r.headers.iteritems():

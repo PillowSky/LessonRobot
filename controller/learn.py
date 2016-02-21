@@ -13,11 +13,8 @@ class LearnHandler(BaseHandler):
 	@authenticated
 	@coroutine
 	def post(self):
-		username = self.get_secure_cookie('username')
-		password = self.get_secure_cookie('password')
+		username = self.get_cookie('username')
 		courseID = self.get_argument('courseID')
-
-		yield self.login(username, password)
 
 		#register
 		r = yield self.client.fetch(self.courseListUrl, headers=self.cookieHeader)
@@ -28,9 +25,6 @@ class LearnHandler(BaseHandler):
 			'__EVENTARGUMENT': '',
 			'__VIEWSTATE': d('#__VIEWSTATE').attr('value'),
 			'__EVENTVALIDATION': d('#__EVENTVALIDATION').attr('value'),
-			'hidPageID': 294,
-			'ctl05$hdIsDefault': 1,
-			'selectSearch': 'txtKeyword',
 			'ctl10$gvCourse$ctl20$checkone': courseID,
 			'ctl10$btnMuti.x': '51',
 			'ctl10$btnMuti.y': '11',

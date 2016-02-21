@@ -2,9 +2,9 @@
 
 from urllib import urlencode
 from urlparse import parse_qs, urlparse
-from tornado.gen import coroutine
+from tornado.gen import coroutine, Return
 from tornado.web import authenticated
-from tornado.httpclient import HTTPRequest
+from tornado.httpclient import HTTPRequest, HTTPError
 from pyquery import PyQuery
 from controller.base import BaseHandler
 
@@ -12,12 +12,14 @@ class ListHandler(BaseHandler):
 	@authenticated
 	@coroutine
 	def get(self):
-		username = self.get_secure_cookie('username')
-		password = self.get_secure_cookie('password')
+		#request my page to verify login
+		try:
+			myRes = yield self.client.fetch(self.myUrl, headers=self.cookieHeader, follow_redirects=False)
+		except HTTPError as e:
+			self.redirect(self.get_login_url())
+			raise Return()
 
-		yield self.login(username, password)
-
-		#request first course page and mypage
+		#request first course page and mycourse page
 		courseTable = {}
 		def extractList(i, e):
 			if i > 0:
@@ -36,26 +38,22 @@ class ListHandler(BaseHandler):
 			courseID = int(parse_qs(urlparse(d('a').attr('href')).query)['id'][0])
 			courseTable[courseID][1] = 1
 
-		firstRes, myCourseRes, myRes = yield [self.client.fetch(self.courseListUrl, headers=self.cookieHeader), self.client.fetch(self.myCourseUrl, headers=self.cookieHeader), self.client.fetch(self.myUrl, headers=self.cookieHeader)]
+		firstRes, myCourseRes = yield [self.client.fetch(self.courseListUrl, headers=self.cookieHeader), self.client.fetch(self.myCourseUrl, headers=self.cookieHeader)]
 
 		d = PyQuery(firstRes.body.decode('utf-8', 'ignore'))
 		d('#ctl10_gvCourse tr').each(extractList)
 
 		#request later page
 		pageText = d('[style="float:left;width:40%;"]').text()
-		count = int(pageText[pageText.index(u'共') + 1]) + 1
+		count = int(pageText[pageText.index(u'共')+1:pageText.index(u'页')])
 
 		batchRequest = []
-		for i in range(2, count):
+		for i in range(2, count + 1):
 			postData = {
 				'__EVENTTARGET': 'ctl10$AspNetPager1',
 				'__EVENTARGUMENT': i,
 				'__VIEWSTATE': d('#__VIEWSTATE').attr('value'),
 				'__EVENTVALIDATION': d('#__EVENTVALIDATION').attr('value'),
-				'hidPageID': 294,
-				'ctl05$hdIsDefault': 1,
-				'selectSearch': 'txtKeyword',
-				'ctl10$HFID': ''
 			}
 			batchRequest.append(HTTPRequest(self.courseListUrl, method='POST', headers=self.cookieHeader, body=urlencode(postData)))
 
@@ -90,5 +88,5 @@ class ListHandler(BaseHandler):
 		}
 
 		courseList = [[name, value[0], value[1]] for name, value in courseTable.iteritems()]
-		courseList.sort(None, None, True)
+		courseList.reverse()
 		self.render('list.html', info=info, courseList=courseList)

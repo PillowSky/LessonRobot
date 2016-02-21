@@ -29,7 +29,8 @@ html
 				li(class="list-group-item") 未学课程数: 
 					b {{info['no']}}	
 				li(class="list-group-item")
-					button#logout(type="button" class="btn btn-default btn-block") 退出
+					a(href='/login')
+						button(type="button" class="btn btn-default btn-block") 退出
 
 		div#infoBoard
 			table(class="table table-bordered table-striped table-hover")
