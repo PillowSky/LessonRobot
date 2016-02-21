@@ -8,7 +8,10 @@ from controller.base import BaseHandler
 
 class LoginHandler(BaseHandler):
 	def get(self):
-		self.clear_all_cookies()
+		if self.get_cookie('.ASPXAUTH'):
+			self.clear_cookie('.ASPXAUTH')
+		if self.get_cookie('guidcookie1'):
+			self.clear_cookie('guidcookie1')
 		self.render('login.html', error=False)
 
 	@coroutine
@@ -19,7 +22,6 @@ class LoginHandler(BaseHandler):
 
 		success = yield self.login(username, password, vcode)
 		if success:
-			self.set_cookie("username", username)
 			self.render('success.html')
 		else:
 			self.render('login.html', error=True)

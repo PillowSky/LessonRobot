@@ -13,7 +13,6 @@ class LearnHandler(BaseHandler):
 	@authenticated
 	@coroutine
 	def post(self):
-		username = self.get_cookie('username')
 		courseID = self.get_argument('courseID')
 
 		#register
@@ -26,30 +25,33 @@ class LearnHandler(BaseHandler):
 			'__VIEWSTATE': d('#__VIEWSTATE').attr('value'),
 			'__EVENTVALIDATION': d('#__EVENTVALIDATION').attr('value'),
 			'ctl10$gvCourse$ctl20$checkone': courseID,
+			'ctl10$HFID': ',%s,' % courseID,
 			'ctl10$btnMuti.x': '51',
-			'ctl10$btnMuti.y': '11',
-			'ctl10$HFID': ',%s,' % courseID
+			'ctl10$btnMuti.y': '11'
 		}
 
 		try:
 			r = yield self.client.fetch(self.courseListUrl, method='POST', headers=self.cookieHeader, body=urlencode(postData))
 		except HTTPError as e:
-			r = e.response
+			pass
 
-		#start play
-		r = yield self.client.fetch(self.playUrl + str(courseID), headers=self.cookieHeader)
+		#get username, sidList and start play
+		r, _ = yield [self.client.fetch(self.courseUrl + str(courseID), headers=self.cookieHeader), self.client.fetch(self.playUrl + str(courseID), headers=self.cookieHeader)]
+		d = PyQuery(r.body.decode('utf-8', 'ignore'))
 
-		#get sid and initParam
+		onclick = d(u'input[value=点击播放]').attr('onclick')
+		username = onclick[onclick.index('user_id=')+8:onclick.index("','")]
+
+		sidList = d('.table2 table td:last-child').text().split(' ')
+		del sidList[0]
+
+		#initParam
 		postData = {
 			"method": "initParam",
 			"courseID": courseID,
 			"userID": username
 		}
-		r, d = yield [self.client.fetch(self.courseUrl + str(courseID), headers=self.cookieHeader), self.client.fetch(self.progressUrl, method='POST', headers=self.cookieHeader, body=urlencode(postData))]
-
-		d = PyQuery(r.body.decode('utf-8', 'ignore'))
-		sidList = d('.table2 table td:last-child').text().split(' ')
-		del sidList[0]
+		yield self.client.fetch(self.progressUrl, method='POST', headers=self.cookieHeader, body=urlencode(postData))
 
 		unitDelta = timedelta(seconds=1)
 		#learn all

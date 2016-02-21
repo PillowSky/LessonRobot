@@ -11,7 +11,7 @@ route = [
 	(r'/login', LoginHandler),
 	(r'/list', ListHandler),
 	(r'/learn', LearnHandler),
-	(r'/vcode', VcodeHandler),
+	(r'/vcode', VcodeHandler)
 ]
 
 application = Application(

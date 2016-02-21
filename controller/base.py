@@ -17,7 +17,11 @@ class BaseHandler(RequestHandler):
 
 	def initialize(self):
 		self.client = AsyncHTTPClient()
-		self.cookieHeader = {'Cookie': self.request.headers.get('Cookie', ''), 'Referer': self.domainUrl}
+		self.cookieHeader = {
+			'Cookie': self.request.headers.get('Cookie', ''),
+			'User-Agent': self.request.headers.get('User-Agent', ''),
+			'Referer': self.domainUrl
+		}
 
 	def get_current_user(self):
 		return self.get_cookie('ASP.NET_SessionId') and self.get_cookie('.ASPXAUTH')
