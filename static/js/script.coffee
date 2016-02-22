@@ -14,7 +14,7 @@ $ ->
 			[courseID, node] = queue.shift()
 			node.text('学习中...')
 
-			$.post '/learn', {"courseID": courseID}, (data)->
+			$.post('/learn', {"courseID": courseID}).always (data)->
 				node.removeClass('btn-primary').removeClass('btn-info')
 				if data == 'ok'
 					node.addClass('btn-success').text('学习成功')

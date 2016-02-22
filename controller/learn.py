@@ -39,8 +39,8 @@ class LearnHandler(BaseHandler):
 		r, _ = yield [self.client.fetch(self.courseUrl + str(courseID), headers=self.cookieHeader), self.client.fetch(self.playUrl + str(courseID), headers=self.cookieHeader)]
 		d = PyQuery(r.body.decode('utf-8', 'ignore'))
 
-                onclick = d('.Course_Main_box_body_02 input[type=button]').attr('onclick')
-                username = onclick[onclick.index('user_id=')+8:onclick.index("','")]
+		onclick = d('.Course_Main_box_body_02 input[type=button]').attr('onclick')
+		username = onclick[onclick.index('user_id=')+8:onclick.index("','")]
 
 		sidList = d('.table2 table td:last-child').text().split(' ')
 		del sidList[0]
