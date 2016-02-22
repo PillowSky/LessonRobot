@@ -57,19 +57,7 @@ html
 			nav
 				ul.pagination
 					{% for i in range(1, info['pageCount'] + 1) %}
-					{% if abs(info['page'] - i) > 5 %}
-					{% if i == 1 %}
-					li
-						a(href="?page={{i}}") {{i}}
-					li
-						a ...
-					{% elif i == info['pageCount'] %}
-					li
-						a ...
-					li
-						a(href="?page={{i}}") {{i}}
-					{% end %}
-					{% elif i == info['page'] %}
+					{% if i == info['page'] %}
 					li.active
 						a {{i}}
 					{% else %}
