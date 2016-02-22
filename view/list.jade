@@ -20,7 +20,7 @@ html
 					b {{info['score']}}
 				li(class="list-group-item") 学时排名: 
 					b {{info['rank']}}
-				li(class="list-group-item") 在线课程总数: 
+				li(class="list-group-item") 本页课程总数: 
 					b {{info['total']}}
 				li(class="list-group-item") 已学课程数: 
 					b {{info['done']}}
@@ -53,6 +53,29 @@ html
 						td
 							button(type="button" class="btn btn-info learnButton" target="{{course[0]}}") 已选在学
 						{% end %}
+					{% end %}
+			nav
+				ul.pagination
+					{% for i in range(1, info['pageCount'] + 1) %}
+					{% if abs(info['page'] - i) > 5 %}
+					{% if i == 1 %}
+					li
+						a(href="?page={{i}}") {{i}}
+					li
+						a ...
+					{% elif i == info['pageCount'] %}
+					li
+						a ...
+					li
+						a(href="?page={{i}}") {{i}}
+					{% end %}
+					{% elif i == info['page'] %}
+					li.active
+						a {{i}}
+					{% else %}
+					li
+						a(href="?page={{i}}") {{i}}
+					{% end %}
 					{% end %}
 
 		script(src="http://lib.sinaapp.com/js/jquery/2.0.3/jquery-2.0.3.min.js")
