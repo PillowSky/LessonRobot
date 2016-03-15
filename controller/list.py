@@ -12,81 +12,63 @@ class ListHandler(BaseHandler):
 	@authenticated
 	@coroutine
 	def get(self):
-		page = int(self.get_argument('page', 1))
+		page = int(self.get_argument('page', 0))
+		courseList = []
 
-		#request my page to verify login
+		#fetch myInfo and verify login
 		try:
-			myRes = yield self.client.fetch(self.myUrl, headers=self.cookieHeader, follow_redirects=False)
+			myInfoRes = yield self.client.fetch(self.myInfoUrl, headers=self.cookieHeader, follow_redirects=False)
 		except HTTPError as e:
 			self.redirect(self.get_login_url())
 			raise Return()
 
-		#request firstPage
-		courseTable = {}
-		def extractList(i, e):
-			if i > 0:
-				d = PyQuery(e)
-				courseID = int(parse_qs(urlparse(d('a').attr('href')).query)['id'][0])
-				name = d('a').attr('title')
-				status = d('td:last-child').text()
-				if status == u'已选':
-					status = 2
-				elif status == u'点击进入':
-					status = 0
-				courseTable[courseID] = [name, status]
-
-		def extractMy(i, e):
-			d = PyQuery(e)
-			courseID = int(parse_qs(urlparse(d('a').attr('href')).query)['id'][0])
-			if courseID in courseTable:
-				courseTable[courseID][1] = 1
-
-		firstRes = yield self.client.fetch(self.courseListUrl, headers=self.cookieHeader)
-		d = PyQuery(firstRes.body.decode('utf-8', 'ignore'))
-
-		#pageCount
-		pageText = d('[style="float:left;width:40%;"]').text()
-		pageCount = int(pageText[pageText.index(u'共')+1:pageText.index(u'页')])
-
-		#request later page
-		if page != 1:
-			postData = {
-				'__EVENTTARGET': 'ctl10$AspNetPager1',
-				'__EVENTARGUMENT': page,
-				'__VIEWSTATE': d('#__VIEWSTATE').attr('value'),
-				'__EVENTVALIDATION': d('#__EVENTVALIDATION').attr('value'),
-			}
-			pageRes = yield self.client.fetch(self.courseListUrl, method='POST', headers=self.cookieHeader, body=urlencode(postData))
-			d = PyQuery(pageRes.body.decode('utf-8', 'ignore'))
-
-		#extractList
-		d('#ctl10_gvCourse tr').each(extractList)
-
-		#process myCourse at last
-		d = PyQuery(myRes.body.decode('utf-8', 'ignore'))
-		d('#MyCourseList li.list4 a').each(extractMy)
-
-		done, now, no = [0, 0, 0]
-		for status in courseTable.itervalues():
-			if status[1] == 0:
-				no += 1
-			elif status[1] == 2:
-				done += 1
-			elif status[1] == 1:
-				now += 1
-
-		info = {
-			'name': d('#UCUserLogin b').text(),
-			'score': d('#UCUserLogin li:nth-child(6)').text().split(' ')[-1],
-			'rank': d('#UCUserLogin li:nth-child(8)').text().split(' ')[-1],
-			'total': len(courseTable),
-			'done': done,
-			'now': now,
-			'no': no,
+		d = PyQuery(myInfoRes.body.decode('utf-8'))
+		info  = {
+			'name': d('.mybox').text().split(' ')[0],
+			'score': d('.con_mybox li').eq(3).find('span').text(),
+			'graduate': d('.con_mybox li').eq(2).find('span').text(),
 			'page': page,
-			'pageCount': pageCount
+			'pageCount': 1
 		}
 
-		courseList = [[name, value[0], value[1]] for name, value in courseTable.iteritems()]
-		courseList.reverse()
+		if page == 0:
+			def extractMy(i, e):
+				d = PyQuery(e)
+				courseID = parse_qs(urlparse(d('.my_study_tr a[target]').attr('href')).query)['cwAcademyId'][0]
+				name = d('.my_study_tr a[target]').text()
+				courseList.append([courseID, name, 1])
+
+			firstRes = yield self.client.fetch(self.myCourseUrl + '1', headers=self.cookieHeader)
+			d = PyQuery(firstRes.body.decode('utf-8'))
+			d('body > li[style]').each(extractMy)
+
+			myCourseCount = len(d('a[style]'))
+			if myCourseCount > 1:
+				batchRes = yield [self.client.fetch(self.myCourseUrl + str(i), headers=self.cookieHeader) for i in range(2, myCourseCount + 1)]
+				for r in batchRes:
+					d = PyQuery(r.body.decode('utf-8'))
+					d('body > li[style]').each(extractMy)
+			else:
+				if len(courseList) == 0:
+					info['page'] = page = 1
+
+		#page may be set to 0
+		if page != 0:
+			def extractList(i, e):
+				d = PyQuery(e)
+				courseID = parse_qs(urlparse(d('td > a').attr('href')).query)['cwAcademyId'][0]
+				name = d('td > a').text()
+				courseList.append([courseID, name, 0])
+
+			params = {
+				'currentPage': page,
+				'onlyShowNoMylr': 1
+			}
+			pageRes = yield self.client.fetch(self.courseListUrl + '?' + urlencode(params), headers=self.cookieHeader)
+
+			d = PyQuery(pageRes.body.decode('utf-8'))
+			d('.con_item_list li').each(extractList)
+
+			info['pageCount'] = int(d('.con_pagelist a').eq(-2).text())
+
 		self.render('list.html', info=info, courseList=courseList)

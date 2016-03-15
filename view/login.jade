@@ -14,14 +14,12 @@ html
 		div.container
 			img#logoBox(src="/static/img/logo.png")
 			form#loginForm(action="/login" method="post")
-				h2.text-center LessonRobot
+				h2.text-center LessonRobot - ShaoXing
 				{% if error %}
-				div(class="alert alert-danger" role="alert") 账号/密码/验证码有误
+				div(class="alert alert-danger" role="alert") 账号或密码有误
 				{% end %}
 				input(type="text" name="username" class="form-control" placeholder="账号" required autofocus)
 				input(type="password" name="password" class="form-control" placeholder="密码" required)
-				input(type="text" name="vcode" class="form-control" placeholder="验证码" required)
-				img#vcode(src="/vcode")
 				button(type="submit" id="submit" class="btn btn-lg btn-primary btn-block") 登录
 
 	script(src="http://lib.sinaapp.com/js/jquery/2.0.3/jquery-2.0.3.min.js")
