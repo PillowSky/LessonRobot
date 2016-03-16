@@ -37,7 +37,7 @@ class ListHandler(BaseHandler):
 
 			my_course_count = len(d('a[style]'))
 			if my_course_count > 1:
-				batch_res = yield [self.client.fetch(self.my_course_url + '?' + urlencode({page: i}), headers=self.session_header) for i in range(2, my_course_count + 1)]
+				batch_res = yield [self.client.fetch(self.my_course_url + '?' + urlencode({'page': i}), headers=self.session_header) for i in range(2, my_course_count + 1)]
 				for r in batch_res:
 					d = PyQuery(r.body.decode('utf-8'))
 					d('body > li[style]').each(extract_my)

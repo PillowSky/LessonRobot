@@ -14,10 +14,10 @@ $ ->
 	processQueue = ->
 		if queue.length and not learning
 			learning = true
-			[courseID, node] = queue.shift()
+			[academyId, node] = queue.shift()
 			node.text('学习中...')
 
-			$.post('/learn', {"courseID": courseID}).always (data)->
+			$.post('/learn', {"academyId": academyId}).always (data)->
 				node.removeClass('btn-primary').removeClass('btn-info')
 				if data == 'ok'
 					node.addClass('btn-success').text('学习成功')

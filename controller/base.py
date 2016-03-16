@@ -8,9 +8,9 @@ class BaseHandler(RequestHandler):
 	course_list_url = 'http://www.0575study.gov.cn/course/courseCenterContent'
 	my_course_url = 'http://www.0575study.gov.cn/myspace/mycourse'
 	my_info_url = 'http://www.0575study.gov.cn/myspace/userinfo'
-	course_url = 'http://www.sygj.org.cn/course/Course.aspx?id='
-	play_url = 'http://www.sygj.org.cn/play/play.aspx?course_id='
-	progress_url = 'http://www.sygj.org.cn/play/AICCProgressNew.ashx'
+	course_url = 'http://www.0575study.gov.cn/course/courseContent'
+	play_url = 'http://www.0575study.gov.cn/course/coursePlay'
+	progress_url = 'http://www.0575study.gov.cn/course/courseWarePlayMemory'
 
 	def initialize(self):
 		self.client = AsyncHTTPClient()
