@@ -14,4 +14,4 @@ WORKDIR /app
 
 EXPOSE 8000
 USER daemon
-CMD ["python", "main.py"]
+CMD ["python", "index.py"]
