@@ -3,6 +3,9 @@ $ ->
 	queue = []
 	learning = false
 
+	$('#pager').change (event)->
+		document.location.href = "/list?page=#{$(this).val()}"
+
 	$('.learnButton').click ->
 		$(this).addClass('disabled').text('队列中...')
 		queue.push([$(this).attr('target'), $(this)])
