@@ -152,7 +152,6 @@ class LessonRobot(object):
 					'userID': userID
 				}
 				yield self.client.fetch(self.progress_url + '?' + urlencode(query), headers=self.session_header)
-				raise Return()
 
 			# first learn
 			if len(section_status) == 0:
