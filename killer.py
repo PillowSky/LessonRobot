@@ -4,12 +4,13 @@ from tornado.queues import Queue
 from lessonrobot import LessonRobot
 
 concurrency = 250
-q = Queue(maxsize=10)
+q = Queue(maxsize=1000)
 
 @coroutine
 def consumer():
 	while True:
 		username = yield q.get()
+		print('[Get] %s' % username)
 
 		try:
 			robot = LessonRobot()
@@ -41,7 +42,7 @@ def producer():
 	for i in xrange(200000, 201000):
 		username = 'sxce%06d' % i
 		yield q.put(username)
-		print('[Start] %s' % username)
+		print('[Put] %s' % username)
 		yield sleep(1)
 
 @coroutine
