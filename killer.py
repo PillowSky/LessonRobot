@@ -23,11 +23,7 @@ def consumer():
 					print('[Page] %s: %d/%d => %d' % (username, i, count, len(course_list)))
 					for course in course_list:
 						print('[Learn] %s: %s' % (username, course))
-						result = yield robot.learn(course)
-						if result:
-							print('[Ok] %s: %s' % (username, course))
-						else:
-							print('[More] %s: %s' % (username, course))
+						yield robot.learn(course)
 				print('[Done] %s' % username)
 			else:
 				print('[Failed] %s' % username)
