@@ -205,13 +205,3 @@ class LessonRobot(object):
 			for sid, status in section_status:
 				if not status:
 					yield learn_section(sid)
-
-		# verify
-		course_res = yield self.client.fetch(self.course_url + '?' + urlencode({'cwAcademyId': academyId}),
-											 headers=self.session_header)
-		d = PyQuery(course_res.body.decode('utf-8'))
-
-		if len(d('.learning_style01')) > 0 and len(d('.learning_style02')) == 0:
-			raise Return(True)
-		else:
-			raise Return(False)
