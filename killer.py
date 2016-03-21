@@ -1,3 +1,4 @@
+import signal
 from tornado.gen import coroutine, sleep
 from tornado.ioloop import IOLoop
 from tornado.queues import Queue
@@ -40,6 +41,14 @@ def producer():
 		yield q.put(username)
 		print('[Put] %s' % username)
 		yield sleep(1)
+
+def handler(signum, frame):
+	step = 10
+	print('[Signal] %d: concurrency += %d' % (signum, step))
+	for i in xrange(step):
+		IOLoop.current().spawn_callback(consumer)
+
+signal.signal(signal.SIGUSR1, handler)
 
 @coroutine
 def main():
