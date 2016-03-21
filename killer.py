@@ -5,7 +5,7 @@ from tornado.queues import Queue
 from lessonrobot import LessonRobot
 
 concurrency = 250
-q = Queue(maxsize=1000)
+q = Queue(maxsize=10)
 
 @coroutine
 def consumer():
@@ -21,7 +21,10 @@ def consumer():
 				count = yield robot.page_count()
 				for i in xrange(count + 1):
 					course_list = yield robot.page(i)
-					print('[Page] %s: %d/%d => %d' % (username, i, count, len(course_list)))
+					course_len = len(course_list)
+					print('[Page] %s: %d/%d => %d' % (username, i, count, course_len)))
+					if course_len == 0 and page != 0:
+						raise Exception('Session Expired')
 					for course in course_list:
 						print('[Learn] %s: %s' % (username, course))
 						yield robot.learn(course)
