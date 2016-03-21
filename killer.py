@@ -23,7 +23,7 @@ def consumer():
 					course_list = yield robot.page(i)
 					course_len = len(course_list)
 					print('[Page] %s: %d/%d => %d' % (username, i, count, course_len))
-					if course_len == 0 and page != 0:
+					if course_len == 0 and i != 0:
 						raise Exception('Session Expired')
 					for course in course_list:
 						print('[Learn] %s: %s' % (username, course))
