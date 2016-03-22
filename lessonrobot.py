@@ -6,7 +6,7 @@ from urllib import urlencode
 from urlparse import parse_qs, urlparse
 
 from fake_useragent import UserAgent
-from tornado.gen import coroutine, Return, Task
+from tornado.gen import coroutine, sleep, Return
 from tornado.httpclient import AsyncHTTPClient, HTTPError
 from tornado.ioloop import IOLoop
 
@@ -139,7 +139,7 @@ class LessonRobot(object):
 					'userID': userID
 				}
 				yield self.client.fetch(self.progress_url + '?' + urlencode(query), headers=self.session_header)
-				yield Task(IOLoop.instance().add_timeout, timedelta(seconds=1))
+				yield sleep(1)
 
 				query = {
 					'method': 'setParam',
