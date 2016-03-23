@@ -1,7 +1,7 @@
 import signal
 import logging
 import time
-from tornado.gen import coroutine, sleep, Return
+from tornado.gen import coroutine, sleep
 from tornado.ioloop import IOLoop
 from tornado.queues import Queue
 from tornado.httpclient import AsyncHTTPClient
@@ -54,10 +54,13 @@ def worker():
 			last_timestamp = exception_timestamp
 			exception_timestamp = time.time()
 			if exception_timestamp - last_timestamp < 10:
-				q.task_done()
-				concurrency -= 1
-				logging.info('[Reduce] concurrency = %d' % concurrency)
-				raise Return()
+				if concurrency > 1:
+					q.task_done()
+					concurrency -= 1
+					logging.info('[Reduce] concurrency = %d' % concurrency)
+					break
+				else:
+					yield sleep(60)
 
 		q.task_done()
 
