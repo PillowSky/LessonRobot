@@ -1,3 +1,9 @@
+# -*- Mode: Python; coding: utf-8; indent-tabs-mode: t; c-basic-offset: 4; tab-width: 4 -*-
+
+import os
+import string
+import subprocess
+import multiprocessing
 from Cookie import SimpleCookie
 from datetime import datetime, timedelta
 from pyquery import PyQuery
@@ -9,17 +15,20 @@ from fake_useragent import UserAgent
 from tornado.gen import coroutine, sleep, Return
 from tornado.httpclient import AsyncHTTPClient, HTTPError
 from tornado.ioloop import IOLoop
-
+from tornado.concurrent import run_on_executor
+from concurrent.futures import ThreadPoolExecutor
 
 class LessonRobot(object):
-	referer_url = 'http://www.0575study.gov.cn'
-	login_url = 'http://www.0575study.gov.cn/login'
-	course_list_url = 'http://www.0575study.gov.cn/course/courseCenterContent'
-	my_course_url = 'http://www.0575study.gov.cn/myspace/mycourse'
-	my_info_url = 'http://www.0575study.gov.cn/myspace/userinfo'
-	course_url = 'http://www.0575study.gov.cn/course/courseContent'
-	play_url = 'http://www.0575study.gov.cn/course/coursePlay'
-	progress_url = 'http://www.0575study.gov.cn/course/courseWarePlayMemory'
+	referer_url = 'http://www.sygj.org.cn'
+	login_url = 'http://www.sygj.org.cn/login.aspx?from=changeuser'
+	kick_url = 'http://www.sygj.org.cn/Login.aspx?Kick=True&UserId='
+	course_list_url = 'http://www.sygj.org.cn/Course/Default.aspx'
+	my_url = 'http://www.sygj.org.cn/my/Default.aspx'
+	course_url = 'http://www.sygj.org.cn/course/Course.aspx?id='
+	play_url = 'http://www.sygj.org.cn/play/play.aspx?course_id='
+	progress_url = 'http://www.sygj.org.cn/play/AICCProgressNew.ashx'
+	vcode_url = 'http://www.sygj.org.cn/inc/CodeImg.aspx'
+	executor = ThreadPoolExecutor(max_workers=multiprocessing.cpu_count())
 
 	def __init__(self):
 		super(LessonRobot, self).__init__()
@@ -28,179 +37,201 @@ class LessonRobot(object):
 			'User-Agent': UserAgent().random,
 			'Referer': self.referer_url
 		}
+		self.cookiejar = SimpleCookie()
 
 	@coroutine
 	def login(self, username, password):
+		self.username = username
+
+		r = yield self.client.fetch(self.login_url, headers=self.session_header)
+		task = yield self.recognize_vcode(username)
+		vcode = yield task
+
+		d = PyQuery(r.body.decode('utf-8', 'ignore'))
 		body = {
-			'username': username,
-			'password': password,
-			'from': 'index',
-			'rememberMe': 'off'
+			"__VIEWSTATE": d('#__VIEWSTATE').attr('value'),
+			"__EVENTVALIDATION": d('#__EVENTVALIDATION').attr('value'),
+			"ctl05$UserName": username,
+			"ctl05$Password": password,
+			"ctl05$txtCode": vcode,
+			"ctl05$LoginButton.x": 36,
+			"ctl05$LoginButton.y": 10
 		}
+
 		try:
-			r = yield self.client.fetch(self.login_url, method='POST', headers=self.session_header,
-										body=urlencode(body), follow_redirects=False)
-		except HTTPError as e:
-			r = e.response
-			if 'JSESSIONID' in r.headers['Set-Cookie']:
-				self.session_header['Cookie'] = 'JSESSIONID=' + SimpleCookie(r.headers['Set-Cookie'])['JSESSIONID'].value
+			r = yield self.client.fetch(self.login_url, method='POST', headers=self.session_header, body=urlencode(body), follow_redirects=False)
+			if 'Set-Cookie' in r.headers:
+				try:
+					r = yield self.client.fetch(self.kick_url + str(username), headers=self.session_header, follow_redirects=False)
+				except HTTPError as e:
+					r = e.response
+				for c in r.headers.get_list('Set-Cookie'):
+					self.cookiejar.load(c)
+				self.load_cookie()
 				raise Return(True)
 			else:
 				raise Return(False)
+		except HTTPError as e:
+			r = e.response
+			for c in r.headers.get_list('Set-Cookie'):
+				self.cookiejar.load(c)
+			self.load_cookie()
+			raise Return(True)
+
+	@run_on_executor
+	@coroutine
+	def recognize_vcode(self, username):
+		while True:
+			r = yield self.client.fetch(self.vcode_url, headers=self.session_header)
+			for c in r.headers.get_list('Set-Cookie'):
+				self.cookiejar.load(c)
+			self.load_cookie()
+
+			vcode_file = "/tmp/%s.gif" % username
+			with open(vcode_file, 'w') as vcode_out:
+				vcode_out.write(r.buffer.getvalue())
+			crop_cmd = "convert {} -resize 56x20! -crop 14x20 {}_%d{}".format(vcode_file, *os.path.splitext(vcode_file))
+			subprocess.check_call(crop_cmd, shell=True)
+			os.remove(vcode_file)
+
+			token = []
+			for i in range(4):
+				part_name = "{}_%d{}".format(*os.path.splitext(vcode_file)) % i
+				color_cmd = "convert {} -scale 1x1\! -format '%[pixel:u]' info:-".format(part_name)
+				color_rgb = subprocess.check_output(color_cmd, shell=True)
+				fill_name = "{}_%d_fill{}".format(*os.path.splitext(vcode_file)) % i
+				fill_cmd = "convert {} -fill white -fuzz 40% -opaque '{}' {}".format(part_name, color_rgb, fill_name)
+				subprocess.check_call(fill_cmd, shell=True)
+				tesseract_cmd = "tesseract %s stdout -psm 10 -l eng nobatch digits" % fill_name
+				tesseract_answer = subprocess.check_output(tesseract_cmd, shell=True)
+				token.append(string.strip(tesseract_answer))
+
+				os.remove(part_name)
+				os.remove(fill_name)
+
+			answer = ''.join(token)
+			if len(answer) == 4:
+				raise Return(answer)
+
+	def load_cookie(self):
+		self.session_header['Cookie'] = '; '.join(["%s=%s" % (k, v.value) for k, v in self.cookiejar.iteritems()])
 
 	@coroutine
 	def page_count(self):
-		r = yield self.fetch_page(1)
-		d = PyQuery(r.body.decode('utf-8'))
-		count = int(d('.con_pagelist a').eq(-2).text())
+		r = yield self.client.fetch(self.course_list_url, headers=self.session_header)
+		d = PyQuery(r.body.decode('utf-8', 'ignore'))
+		text = d('[style="float:left;width:40%;"]').text()
+		count = int(text[text.index(u'共')+1:text.index(u'页')])
 
 		raise Return(count)
 
 	@coroutine
 	def page(self, page):
-		course_list = []
+		course_table = {}
 
-		if page == 0:
-			def extract_my(i, e):
+		def extract_list(i, e):
+			if i > 0:
 				d = PyQuery(e)
-				course_id = parse_qs(urlparse(d('.my_study_tr a[target]').attr('href')).query)['cwAcademyId'][0]
-				course_list.append(course_id)
+				courseID = int(parse_qs(urlparse(d('a').attr('href')).query)['id'][0])
+				status = d('td:last-child').text()
+				if status == u'已选':
+					status = 2
+				elif status == u'点击进入':
+					status = 0
+				course_table[courseID] = status
 
-			first_res = yield self.client.fetch(self.my_course_url, headers=self.session_header)
-			d = PyQuery(first_res.body.decode('utf-8'))
-			d('body > li[style]').each(extract_my)
+		def extract_my(i, e):
+			d = PyQuery(e)
+			courseID = int(parse_qs(urlparse(d('a').attr('href')).query)['id'][0])
+			if courseID in course_table:
+				course_table[courseID] = 1
 
-			my_course_count = len(d('a[style]'))
-			if my_course_count > 1:
-				batch_res = yield [
-					self.client.fetch(self.my_course_url + '?' + urlencode({'page': i}), headers=self.session_header)
-					for i in range(2, my_course_count + 1)]
-				for r in batch_res:
-					d = PyQuery(r.body.decode('utf-8'))
-					d('body > li[style]').each(extract_my)
+		first_res, my_res = yield [self.client.fetch(self.course_list_url, headers=self.session_header), self.client.fetch(self.my_url, headers=self.session_header)]
+		d = PyQuery(first_res.body.decode('utf-8', 'ignore'))
 
-		# fetch unlearned course
-		if page != 0:
-			def extract_list(i, e):
-				d = PyQuery(e)
-				course_id = parse_qs(urlparse(d('td > a').attr('href')).query)['cwAcademyId'][0]
-				course_list.append(course_id)
+		#request later page
+		if page != 1:
+			body = {
+				'__EVENTTARGET': 'ctl10$AspNetPager1',
+				'__EVENTARGUMENT': page,
+				'__VIEWSTATE': d('#__VIEWSTATE').attr('value'),
+				'__EVENTVALIDATION': d('#__EVENTVALIDATION').attr('value'),
+			}
+			page_res = yield self.client.fetch(self.course_list_url, method='POST', headers=self.session_header, body=urlencode(body))
+			d = PyQuery(page_res.body.decode('utf-8', 'ignore'))
 
-			page_res = yield self.fetch_page(page)
-			d = PyQuery(page_res.body.decode('utf-8'))
-			d('.con_item_list li').each(extract_list)
+		#extract_list
+		d('#ctl10_gvCourse tr').each(extract_list)
 
+		#process myCourse at last
+		d = PyQuery(my_res.body.decode('utf-8', 'ignore'))
+		d('#MyCourseList li.list4 a').each(extract_my)
+
+		course_list = [name for name, value in course_table.iteritems() if value != 2]
 		raise Return(course_list)
 
-	def fetch_page(self, page):
-		query = {
-			'currentPage': page,
-			'onlyShowNoMylr': 1
+	@coroutine
+	def learn(self, courseID):
+		#register
+		r = yield self.client.fetch(self.course_list_url, headers=self.session_header)
+		d = PyQuery(r.body.decode('utf-8', 'ignore'))
+
+		body = {
+			'__EVENTTARGET': '',
+			'__EVENTARGUMENT': '',
+			'__VIEWSTATE': d('#__VIEWSTATE').attr('value'),
+			'__EVENTVALIDATION': d('#__EVENTVALIDATION').attr('value'),
+			'ctl10$gvCourse$ctl20$checkone': courseID,
+			'ctl10$HFID': ',%s,' % courseID,
+			'ctl10$btnMuti.x': '51',
+			'ctl10$btnMuti.y': '11'
 		}
 
-		return self.client.fetch(self.course_list_url + '?' + urlencode(query), headers=self.session_header)
+		try:
+			r = yield self.client.fetch(self.course_list_url, method='POST', headers=self.session_header, body=urlencode(body))
+		except HTTPError as e:
+			pass
 
-	@coroutine
-	def learn(self, academyId):
-		# fetch course page and register
-		course_res, play_res = yield [self.client.fetch(self.course_url + '?' + urlencode({'cwAcademyId': academyId}),
-														headers=self.session_header),
-									  self.client.fetch(self.play_url + '?' + urlencode({'cwAcademyId': academyId}),
-														headers=self.session_header)]
+		#get username, sid_list and start play
+		r, _ = yield [self.client.fetch(self.course_url + str(courseID), headers=self.session_header), self.client.fetch(self.play_url + str(courseID), headers=self.session_header)]
+		d = PyQuery(r.body.decode('utf-8', 'ignore'))
 
-		d = PyQuery(play_res.body.decode('utf-8'))
-		qs = parse_qs(urlparse(d('#playframe').attr('src')).query)
-		courseID = qs['courseID'][0]
-		userID = qs['userID'][0]
+		sid_list = d('.table2 table td:last-child').text().split(' ')
+		del sid_list[0]
 
-		if 'index.html' in d('#playframe').attr('src'):
-			d = PyQuery(course_res.body.decode('utf-8'))
-			section_status = d('.learning_style01, .learning_style02').map(
-				lambda i, e: ('S%03d' % (i + 1), PyQuery(e).hasClass('learning_style01')))
+		#initParam
+		body = {
+			"method": "initParam",
+			"courseID": courseID,
+			"userID": self.username
+		}
+		yield self.client.fetch(self.progress_url, method='POST', headers=self.session_header, body=urlencode(body))
 
-			# initParam
-			query = {
-				'method': 'initParam',
+		#learn all
+		for sid in sid_list:
+			#start one
+			body = {
+				'method': 'setParam',
+				'lastLocation': 0,
+				'SID': sid,
+				'curtime': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+				'STime': 1,
+				'state': 'S',
 				'courseID': courseID,
-				'userID': userID,
+				'userID': self.username
 			}
-			yield self.client.fetch(self.progress_url + '?' + urlencode(query), headers=self.session_header)
+			yield self.client.fetch(self.progress_url, method='POST', headers=self.session_header, body=urlencode(body))
+			yield sleep(1)
 
-			@coroutine
-			def learn_section(sid):
-				query = {
-					'method': 'setParam',
-					'lastLocation': 0,
-					'SID': sid,
-					'curtime': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-					'STime': 1,
-					'state': 'S',
-					'courseID': courseID,
-					'userID': userID
-				}
-				yield self.client.fetch(self.progress_url + '?' + urlencode(query), headers=self.session_header)
-				yield sleep(1)
-
-				query = {
-					'method': 'setParam',
-					'lastLocation': randrange(10 ** 7, 10 ** 8),
-					'SID': sid,
-					'curtime': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-					'STime': 1,
-					'state': 'C',
-					'courseID': courseID,
-					'userID': userID
-				}
-				yield self.client.fetch(self.progress_url + '?' + urlencode(query), headers=self.session_header)
-
-			# first learn
-			if len(section_status) == 0:
-				yield learn_section('S001')
-
-				course_res = yield self.client.fetch(self.course_url + '?' + urlencode({'cwAcademyId': academyId}),
-													 headers=self.session_header)
-				d = PyQuery(course_res.body.decode('utf-8'))
-				section_status = d('.learning_style01, .learning_style02').map(
-					lambda i, e: ('S%03d' % (i + 1), PyQuery(e).hasClass('learning_style01')))
-
-			for sid, status in section_status:
-				if not status:
-					yield learn_section(sid)
-		else:
-			d = PyQuery(course_res.body.decode('utf-8'))
-			section_status = d('.learning_style01, .learning_style02').map(
-				lambda i, e: (i + 1, PyQuery(e).hasClass('learning_style01')))
-
-			# scomInitParam
-			query = {
-				'method': 'scomInitParam',
+			#finish one
+			body = {
+				'method': 'setParam',
+				'lastLocation': 10050,
+				'SID': sid,
+				'curtime': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+				'STime': 1,
+				'state': 'C',
 				'courseID': courseID,
-				'userID': userID,
+				'userID': self.username
 			}
-			yield self.client.fetch(self.progress_url + '?' + urlencode(query), headers=self.session_header)
-
-			@coroutine
-			def learn_section(sid):
-				query = {
-					'method': 'scomSetParam',
-					'courseID': courseID,
-					'userID': userID,
-					'SID': 60 * sid,
-					'STime': randrange(6000, 10000),
-					'interval': 60
-				}
-				yield self.client.fetch(self.progress_url + '?' + urlencode(query), headers=self.session_header)
-
-			# first learn
-			if len(section_status) == 0:
-				yield learn_section(1)
-
-				course_res = yield self.client.fetch(self.course_url + '?' + urlencode({'cwAcademyId': academyId}),
-													 headers=self.session_header)
-				d = PyQuery(course_res.body.decode('utf-8'))
-				section_status = d('.learning_style01, .learning_style02').map(
-					lambda i, e: (i + 1, PyQuery(e).hasClass('learning_style01')))
-
-			for sid, status in section_status:
-				if not status:
-					yield learn_section(sid)
+			yield self.client.fetch(self.progress_url, method='POST', headers=self.session_header, body=urlencode(body))

@@ -1,6 +1,7 @@
 import signal
 import logging
 import time
+import json
 from tornado.gen import coroutine, sleep
 from tornado.ioloop import IOLoop
 from tornado.queues import Queue
@@ -25,16 +26,14 @@ def worker():
 
 		try:
 			robot = LessonRobot()
-			result = yield robot.login(username, '123456')
+			result = yield robot.login(username, '888888')
 			if result:
 				logging.info('[Login] %s' % username)
 				count = yield robot.page_count()
-				for i in xrange(count + 1):
+				for i in xrange(1, count + 1):
 					course_list = yield robot.page(i)
 					course_len = len(course_list)
 					logging.info('[Page] %s: %d/%d => %d' % (username, i, count, course_len))
-					if course_len == 0 and i != 0:
-						raise Exception('Session Expired')
 					for course in course_list:
 						logging.info('[Learn] %s: %s' % (username, course))
 						yield robot.learn(course)
@@ -66,8 +65,10 @@ def worker():
 
 @coroutine
 def spawner():
-	for i in xrange(200000, 201000):
-		username = 'sxce%06d' % i
+	accounts = []
+	with open('accounts.json') as accounts_file:
+		accounts = json.loads(accounts_file.read())
+	for username in accounts:
 		yield q.put(username)
 		logging.info('[Put] %s' % username)
 		yield sleep(1)
