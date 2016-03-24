@@ -3,7 +3,6 @@
 import os
 import string
 import subprocess
-import multiprocessing
 from Cookie import SimpleCookie
 from datetime import datetime, timedelta
 from pyquery import PyQuery
@@ -28,7 +27,7 @@ class LessonRobot(object):
 	play_url = 'http://www.sygj.org.cn/play/play.aspx?course_id='
 	progress_url = 'http://www.sygj.org.cn/play/AICCProgressNew.ashx'
 	vcode_url = 'http://www.sygj.org.cn/inc/CodeImg.aspx'
-	executor = ThreadPoolExecutor(max_workers=multiprocessing.cpu_count())
+	executor = ThreadPoolExecutor(max_workers=1)
 
 	def __init__(self):
 		super(LessonRobot, self).__init__()
