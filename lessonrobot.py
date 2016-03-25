@@ -13,14 +13,14 @@ from tornado.ioloop import IOLoop
 
 
 class LessonRobot(object):
-	referer_url = 'http://www.zjce.gov.cn'
-	login_url = 'http://www.zjce.gov.cn/login'
-	course_list_url = 'http://www.zjce.gov.cn/course/courseCenterContent'
-	my_course_url = 'http://www.zjce.gov.cn/myspace/mycourse'
-	my_info_url = 'http://www.zjce.gov.cn/myspace/userinfo'
-	course_url = 'http://www.zjce.gov.cn/course/courseContent'
-	play_url = 'http://www.zjce.gov.cn/course/coursePlay'
-	progress_url = 'http://www.zjce.gov.cn/course/courseWarePlayMemory'
+	referer_url = 'http://www.lsce.gov.cn'
+	login_url = 'http://www.lsce.gov.cn/login'
+	course_list_url = 'http://www.lsce.gov.cn/course/courseCenterContent'
+	my_course_url = 'http://www.lsce.gov.cn/myspace/mycourse'
+	my_info_url = 'http://www.lsce.gov.cn/myspace/userinfo'
+	course_url = 'http://www.lsce.gov.cn/course/courseContent'
+	play_url = 'http://www.lsce.gov.cn/course/coursePlay'
+	progress_url = 'http://www.lsce.gov.cn/course/courseWarePlayMemory'
 
 	def __init__(self):
 		super(LessonRobot, self).__init__()
