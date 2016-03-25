@@ -65,10 +65,8 @@ def worker():
 
 @coroutine
 def spawner():
-	accounts = []
-	with open('accounts.json') as accounts_file:
-		accounts = json.loads(accounts_file.read())
-	for username in accounts:
+	for i in xrange(000000, 001000):
+		username = 'qzce%06d' % i
 		yield q.put(username)
 		logging.info('[Put] %s' % username)
 		yield sleep(1)

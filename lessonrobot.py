@@ -13,21 +13,18 @@ from urlparse import parse_qs, urlparse
 from fake_useragent import UserAgent
 from tornado.gen import coroutine, sleep, Return
 from tornado.httpclient import AsyncHTTPClient, HTTPError
-from tornado.ioloop import IOLoop
-from tornado.concurrent import run_on_executor
-from concurrent.futures import ThreadPoolExecutor
 
 class LessonRobot(object):
-	referer_url = 'http://www.sygj.org.cn'
-	login_url = 'http://www.sygj.org.cn/login.aspx?from=changeuser'
-	kick_url = 'http://www.sygj.org.cn/Login.aspx?Kick=True&UserId='
-	course_list_url = 'http://www.sygj.org.cn/Course/Default.aspx'
-	my_url = 'http://www.sygj.org.cn/my/Default.aspx'
-	course_url = 'http://www.sygj.org.cn/course/Course.aspx?id='
-	play_url = 'http://www.sygj.org.cn/play/play.aspx?course_id='
-	progress_url = 'http://www.sygj.org.cn/play/AICCProgressNew.ashx'
-	vcode_url = 'http://www.sygj.org.cn/inc/CodeImg.aspx'
-	executor = ThreadPoolExecutor(max_workers=1)
+	referer_url = 'http://www.qzce.gov.cn'
+	login_url = 'http://www.qzce.gov.cn/login.aspx?from=changeuser'
+	kick_url = 'http://www.qzce.gov.cn/Login.aspx?Kick=True&UserId='
+	course_list_url = 'http://www.qzce.gov.cn/Course/Default.aspx'
+	my_url = 'http://www.qzce.gov.cn/my/Default.aspx'
+	course_url = 'http://www.qzce.gov.cn/course/Course.aspx?id='
+	play_url = 'http://www.qzce.gov.cn/play/play.aspx?course_id='
+	progress_url = 'http://www.qzce.gov.cn/play/AICCProgressNew.ashx'
+	vcode_url = 'http://www.qzce.gov.cn/inc/CodeImg.aspx'
+	redirect_url = 'http://www.qzce.gov.cn/play/redirect.aspx'
 
 	def __init__(self):
 		super(LessonRobot, self).__init__()
@@ -43,18 +40,14 @@ class LessonRobot(object):
 		self.username = username
 
 		r = yield self.client.fetch(self.login_url, headers=self.session_header)
-		task = yield self.recognize_vcode(username)
-		vcode = yield task
-
-		d = PyQuery(r.body.decode('utf-8', 'ignore'))
+		d = PyQuery(r.body.decode('gb2312', 'ignore'))
 		body = {
 			"__VIEWSTATE": d('#__VIEWSTATE').attr('value'),
 			"__EVENTVALIDATION": d('#__EVENTVALIDATION').attr('value'),
-			"ctl05$UserName": username,
-			"ctl05$Password": password,
-			"ctl05$txtCode": vcode,
-			"ctl05$LoginButton.x": 36,
-			"ctl05$LoginButton.y": 10
+			"ctl00$cp$Login1$UserName": username,
+			"ctl00$cp$Login1$Password": password,
+			"ctl00$cp$Login1$LoginButton.x": 25,
+			"ctl00$cp$Login1$LoginButton.y": 10
 		}
 
 		try:
@@ -77,48 +70,13 @@ class LessonRobot(object):
 			self.load_cookie()
 			raise Return(True)
 
-	@run_on_executor
-	@coroutine
-	def recognize_vcode(self, username):
-		while True:
-			r = yield self.client.fetch(self.vcode_url, headers=self.session_header)
-			for c in r.headers.get_list('Set-Cookie'):
-				self.cookiejar.load(c)
-			self.load_cookie()
-
-			vcode_file = "/tmp/%s.gif" % username
-			with open(vcode_file, 'w') as vcode_out:
-				vcode_out.write(r.buffer.getvalue())
-			crop_cmd = "convert {} -resize 56x20! -crop 14x20 {}_%d{}".format(vcode_file, *os.path.splitext(vcode_file))
-			subprocess.check_call(crop_cmd, shell=True)
-			os.remove(vcode_file)
-
-			token = []
-			for i in range(4):
-				part_name = "{}_%d{}".format(*os.path.splitext(vcode_file)) % i
-				color_cmd = "convert {} -scale 1x1\! -format '%[pixel:u]' info:-".format(part_name)
-				color_rgb = subprocess.check_output(color_cmd, shell=True)
-				fill_name = "{}_%d_fill{}".format(*os.path.splitext(vcode_file)) % i
-				fill_cmd = "convert {} -fill white -fuzz 40% -opaque '{}' {}".format(part_name, color_rgb, fill_name)
-				subprocess.check_call(fill_cmd, shell=True)
-				tesseract_cmd = "tesseract %s stdout -psm 10 -l eng nobatch digits" % fill_name
-				tesseract_answer = subprocess.check_output(tesseract_cmd, shell=True)
-				token.append(string.strip(tesseract_answer))
-
-				os.remove(part_name)
-				os.remove(fill_name)
-
-			answer = ''.join(token)
-			if len(answer) == 4:
-				raise Return(answer)
-
 	def load_cookie(self):
 		self.session_header['Cookie'] = '; '.join(["%s=%s" % (k, v.value) for k, v in self.cookiejar.iteritems()])
 
 	@coroutine
 	def page_count(self):
 		r = yield self.client.fetch(self.course_list_url, headers=self.session_header)
-		d = PyQuery(r.body.decode('utf-8', 'ignore'))
+		d = PyQuery(r.body.decode('gb2312', 'ignore'))
 		text = d('[style="float:left;width:40%;"]').text()
 		count = int(text[text.index(u'共')+1:text.index(u'页')])
 
@@ -146,25 +104,25 @@ class LessonRobot(object):
 				course_table[courseID] = 1
 
 		first_res, my_res = yield [self.client.fetch(self.course_list_url, headers=self.session_header), self.client.fetch(self.my_url, headers=self.session_header)]
-		d = PyQuery(first_res.body.decode('utf-8', 'ignore'))
+		d = PyQuery(first_res.body.decode('gb2312', 'ignore'))
 
 		#request later page
 		if page != 1:
 			body = {
-				'__EVENTTARGET': 'ctl10$AspNetPager1',
+				'__EVENTTARGET': 'ctl00$ctl00$ctl00$cp$cp$cp$AspNetPager1',
 				'__EVENTARGUMENT': page,
 				'__VIEWSTATE': d('#__VIEWSTATE').attr('value'),
 				'__EVENTVALIDATION': d('#__EVENTVALIDATION').attr('value'),
 			}
 			page_res = yield self.client.fetch(self.course_list_url, method='POST', headers=self.session_header, body=urlencode(body))
-			d = PyQuery(page_res.body.decode('utf-8', 'ignore'))
+			d = PyQuery(page_res.body.decode('gb2312', 'ignore'))
 
 		#extract_list
-		d('#ctl10_gvCourse tr').each(extract_list)
+		d('#ctl00_ctl00_ctl00_cp_cp_cp_gvCourse tr').each(extract_list)
 
 		#process myCourse at last
-		d = PyQuery(my_res.body.decode('utf-8', 'ignore'))
-		d('#MyCourseList li.list4 a').each(extract_my)
+		d = PyQuery(my_res.body.decode('gb2312', 'ignore'))
+		d('table tr.table2').each(extract_my)
 
 		course_list = [name for name, value in course_table.iteritems() if value != 2]
 		raise Return(course_list)
@@ -173,29 +131,23 @@ class LessonRobot(object):
 	def learn(self, courseID):
 		#register
 		r = yield self.client.fetch(self.course_list_url, headers=self.session_header)
-		d = PyQuery(r.body.decode('utf-8', 'ignore'))
+		d = PyQuery(r.body.decode('gb2312', 'ignore'))
 
-		body = {
-			'__EVENTTARGET': '',
-			'__EVENTARGUMENT': '',
-			'__VIEWSTATE': d('#__VIEWSTATE').attr('value'),
-			'__EVENTVALIDATION': d('#__EVENTVALIDATION').attr('value'),
-			'ctl10$gvCourse$ctl20$checkone': courseID,
-			'ctl10$HFID': ',%s,' % courseID,
-			'ctl10$btnMuti.x': '51',
-			'ctl10$btnMuti.y': '11'
+		query = {
+			'id': courseID,
+			'user_id': self.username
 		}
 
 		try:
-			r = yield self.client.fetch(self.course_list_url, method='POST', headers=self.session_header, body=urlencode(body))
+			r = yield self.client.fetch(self.redirect_url + '?' + urlencode(query), headers=self.session_header, follow_redirects=False)
 		except HTTPError as e:
 			pass
 
 		#get username, sid_list and start play
 		r, _ = yield [self.client.fetch(self.course_url + str(courseID), headers=self.session_header), self.client.fetch(self.play_url + str(courseID), headers=self.session_header)]
-		d = PyQuery(r.body.decode('utf-8', 'ignore'))
+		d = PyQuery(r.body.decode('gb2312', 'ignore'))
 
-		sid_list = d('.table2 table td:last-child').text().split(' ')
+		sid_list = d('#ctl00_ctl00_ctl00_cp_cp_cp_Panel1 table td:last-child').text().split(' ')
 		del sid_list[0]
 
 		#initParam
@@ -208,29 +160,30 @@ class LessonRobot(object):
 
 		#learn all
 		for sid in sid_list:
-			#start one
-			body = {
-				'method': 'setParam',
-				'lastLocation': 0,
-				'SID': sid,
-				'curtime': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-				'STime': 1,
-				'state': 'S',
-				'courseID': courseID,
-				'userID': self.username
-			}
-			yield self.client.fetch(self.progress_url, method='POST', headers=self.session_header, body=urlencode(body))
-			yield sleep(1)
+			if 'S' in sid:
+				#start one
+				body = {
+					'method': 'setParam',
+					'lastLocation': 0,
+					'SID': sid,
+					'curtime': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+					'STime': 1,
+					'state': 'S',
+					'courseID': courseID,
+					'userID': self.username
+				}
+				yield self.client.fetch(self.progress_url, method='POST', headers=self.session_header, body=urlencode(body))
+				yield sleep(1)
 
-			#finish one
-			body = {
-				'method': 'setParam',
-				'lastLocation': 10050,
-				'SID': sid,
-				'curtime': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-				'STime': 1,
-				'state': 'C',
-				'courseID': courseID,
-				'userID': self.username
-			}
-			yield self.client.fetch(self.progress_url, method='POST', headers=self.session_header, body=urlencode(body))
+				#finish one
+				body = {
+					'method': 'setParam',
+					'lastLocation': 10050,
+					'SID': sid,
+					'curtime': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+					'STime': 1,
+					'state': 'C',
+					'courseID': courseID,
+					'userID': self.username
+				}
+				yield self.client.fetch(self.progress_url, method='POST', headers=self.session_header, body=urlencode(body))
