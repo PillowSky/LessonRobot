@@ -1,3 +1,4 @@
+import re
 from Cookie import SimpleCookie
 from datetime import datetime, timedelta
 from pyquery import PyQuery
@@ -12,14 +13,14 @@ from tornado.ioloop import IOLoop
 
 
 class LessonRobot(object):
-	referer_url = 'http://www.0575study.gov.cn'
-	login_url = 'http://www.0575study.gov.cn/login'
-	course_list_url = 'http://www.0575study.gov.cn/course/courseCenterContent'
-	my_course_url = 'http://www.0575study.gov.cn/myspace/mycourse'
-	my_info_url = 'http://www.0575study.gov.cn/myspace/userinfo'
-	course_url = 'http://www.0575study.gov.cn/course/courseContent'
-	play_url = 'http://www.0575study.gov.cn/course/coursePlay'
-	progress_url = 'http://www.0575study.gov.cn/course/courseWarePlayMemory'
+	referer_url = 'http://www.zjce.gov.cn'
+	login_url = 'http://www.zjce.gov.cn/login'
+	course_list_url = 'http://www.zjce.gov.cn/course/courseCenterContent'
+	my_course_url = 'http://www.zjce.gov.cn/myspace/mycourse'
+	my_info_url = 'http://www.zjce.gov.cn/myspace/userinfo'
+	course_url = 'http://www.zjce.gov.cn/course/courseContent'
+	play_url = 'http://www.zjce.gov.cn/course/coursePlay'
+	progress_url = 'http://www.zjce.gov.cn/course/courseWarePlayMemory'
 
 	def __init__(self):
 		super(LessonRobot, self).__init__()
@@ -52,7 +53,9 @@ class LessonRobot(object):
 	def page_count(self):
 		r = yield self.fetch_page(1)
 		d = PyQuery(r.body.decode('utf-8'))
-		count = int(d('.con_pagelist a').eq(-2).text())
+		text = d('.pags_background a').eq(-2).text()
+		reg = r'\.*(\d*)'
+		count = int(re.search(reg, text).group(1))
 
 		raise Return(count)
 
@@ -68,27 +71,27 @@ class LessonRobot(object):
 
 			first_res = yield self.client.fetch(self.my_course_url, headers=self.session_header)
 			d = PyQuery(first_res.body.decode('utf-8'))
-			d('body > li[style]').each(extract_my)
+			d('body > .right_content_tab_2').each(extract_my)
 
-			my_course_count = len(d('a[style]'))
+			my_course_count = len(d('.pags_background')) - 1
 			if my_course_count > 1:
 				batch_res = yield [
 					self.client.fetch(self.my_course_url + '?' + urlencode({'page': i}), headers=self.session_header)
 					for i in range(2, my_course_count + 1)]
 				for r in batch_res:
 					d = PyQuery(r.body.decode('utf-8'))
-					d('body > li[style]').each(extract_my)
+					d('body > .right_content_tab_2').each(extract_my)
 
 		# fetch unlearned course
 		if page != 0:
 			def extract_list(i, e):
 				d = PyQuery(e)
-				course_id = parse_qs(urlparse(d('td > a').attr('href')).query)['cwAcademyId'][0]
+				course_id = parse_qs(urlparse(d('a').attr('href')).query)['cwAcademyId'][0]
 				course_list.append(course_id)
 
 			page_res = yield self.fetch_page(page)
 			d = PyQuery(page_res.body.decode('utf-8'))
-			d('.con_item_list li').each(extract_list)
+			d('.right_content_tab').each(extract_list)
 
 		raise Return(course_list)
 

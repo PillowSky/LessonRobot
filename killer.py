@@ -67,7 +67,7 @@ def worker():
 @coroutine
 def spawner():
 	for i in xrange(200000, 201000):
-		username = 'sxce%06d' % i
+		username = 'zjce%06d' % i
 		yield q.put(username)
 		logging.info('[Put] %s' % username)
 		yield sleep(1)
