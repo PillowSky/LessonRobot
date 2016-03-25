@@ -8,59 +8,37 @@ from tornado.queues import Queue
 from tornado.httpclient import AsyncHTTPClient
 from lessonrobot import LessonRobot
 
-concurrency = 10
+concurrency = 8
 q = Queue(maxsize=1000)
 
 logging.basicConfig(format="%(asctime)s: %(message)s", level=logging.INFO)
 AsyncHTTPClient.configure(None, max_clients=1000)
 
-spawn_timestamp = time.time()
-exception_timestamp = time.time()
+accounts_ok = []
+accounts_fail = []
 
 @coroutine
 def worker():
-	global concurrency, spawn_timestamp, exception_timestamp
 	while True:
 		username = yield q.get()
 		logging.info('[Get] %s' % username)
 
 		try:
 			robot = LessonRobot()
-			result = yield robot.login(username, '888888')
-			if result:
-				logging.info('[Login] %s' % username)
-				count = yield robot.page_count()
-				for i in xrange(1, count + 1):
-					course_list = yield robot.page(i)
-					course_len = len(course_list)
-					logging.info('[Page] %s: %d/%d => %d' % (username, i, count, course_len))
-					for course in course_list:
-						logging.info('[Learn] %s: %s' % (username, course))
-						yield robot.learn(course)
-					now_timestamp = time.time()
-					if now_timestamp - exception_timestamp > 60 and now_timestamp - spawn_timestamp > 60:
-						concurrency += 1
-						IOLoop.current().spawn_callback(worker)
-						spawn_timestamp = now_timestamp
-						logging.info('[Spawn] concurrency = %d' % concurrency)
-				logging.info('[Done] %s' % username)
-			else:
-				logging.info('[Failed] %s' % username)
+			for i in range(10):
+				logging.info('[Try] %s: %d/10' % (username, i+1))
+				result = yield robot.login(username, username)
+				if result:
+					logging.info('[Login] %s' % username)
+					accounts_ok.append(username)
+					break
+				else:
+					if i == 9:
+						logging.info('[Failed] %s' % username)
+						accounts_fail.append(username)
 		except Exception as e:
 			logging.info('[Exception] %s:%s' % (username, e))
 			yield q.put(username)
-
-			last_timestamp = exception_timestamp
-			exception_timestamp = time.time()
-			if exception_timestamp - last_timestamp < 10:
-				if concurrency > 1:
-					q.task_done()
-					concurrency -= 1
-					logging.info('[Reduce] concurrency = %d' % concurrency)
-					break
-				else:
-					yield sleep(60)
-
 		q.task_done()
 
 @coroutine
@@ -73,14 +51,6 @@ def spawner():
 		logging.info('[Put] %s' % username)
 		yield sleep(1)
 
-def handler_USR1(signum, frame):
-	global concurrency
-	concurrency += 1
-	logging.info('[Signal] %d: concurrency = %d' % (signum, concurrency))
-	IOLoop.current().spawn_callback(worker)
-
-signal.signal(signal.SIGUSR1, handler_USR1)
-
 @coroutine
 def main():
 	for i in xrange(concurrency):
@@ -88,6 +58,13 @@ def main():
 
 	yield spawner()
 	yield q.join()
+
+	with open('accounts_ok.json', 'w') as fout:
+		fout.write(json.dumps(accounts_ok))
+
+	with open('accounts_fail.json', 'w') as fout:
+		fout.write(json.dumps(accounts_fail))
+
 	logging.info('All Done')
 
 IOLoop.current().run_sync(main)
