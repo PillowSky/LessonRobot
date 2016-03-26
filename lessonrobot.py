@@ -1,6 +1,7 @@
 # -*- Mode: Python; coding: utf-8; indent-tabs-mode: t; c-basic-offset: 4; tab-width: 4 -*-
 
 import os
+import re
 import string
 import subprocess
 from Cookie import SimpleCookie
@@ -15,15 +16,15 @@ from tornado.gen import coroutine, sleep, Return
 from tornado.httpclient import AsyncHTTPClient, HTTPError
 
 class LessonRobot(object):
-	referer_url = 'http://www.qzce.gov.cn'
-	login_url = 'http://www.qzce.gov.cn/login.aspx?from=changeuser'
-	kick_url = 'http://www.qzce.gov.cn/Login.aspx?Kick=True&UserId='
-	course_list_url = 'http://www.qzce.gov.cn/Course/Default.aspx'
-	my_url = 'http://www.qzce.gov.cn/my/Default.aspx'
-	course_url = 'http://www.qzce.gov.cn/course/Course.aspx?id='
-	play_url = 'http://www.qzce.gov.cn/play/play.aspx?course_id='
-	progress_url = 'http://www.qzce.gov.cn/play/AICCProgressNew.ashx'
-	redirect_url = 'http://www.qzce.gov.cn/play/redirect.aspx'
+	referer_url = 'http://jhce.jhxf.gov.cn'
+	login_url = 'http://jhce.jhxf.gov.cn/login.aspx?from=changeuser'
+	kick_url = 'http://jhce.jhxf.gov.cn/Login.aspx?Kick=True&UserId='
+	course_list_url = 'http://jhce.jhxf.gov.cn/Course/Default.aspx'
+	my_url = 'http://jhce.jhxf.gov.cn/my/Default.aspx'
+	course_url = 'http://jhce.jhxf.gov.cn/course/Course.aspx?id='
+	play_url = 'http://jhce.jhxf.gov.cn/play/play.aspx?course_id='
+	progress_url = 'http://jhce.jhxf.gov.cn/play/AICCProgressNew.ashx'
+	redirect_url = 'http://jhce.jhxf.gov.cn/play/redirect.aspx'
 
 	def __init__(self):
 		super(LessonRobot, self).__init__()
@@ -36,17 +37,20 @@ class LessonRobot(object):
 
 	@coroutine
 	def login(self, username, password):
-		self.username = username
+		self.username = username = username.encode('utf-8')
 
 		r = yield self.client.fetch(self.login_url, headers=self.session_header)
-		d = PyQuery(r.body.decode('gb2312', 'ignore'))
+		for c in r.headers.get_list('Set-Cookie'):
+			self.cookiejar.load(c)
+		self.load_cookie()
+
+		d = PyQuery(r.body.decode('utf-8', 'ignore'))
 		body = {
 			"__VIEWSTATE": d('#__VIEWSTATE').attr('value'),
 			"__EVENTVALIDATION": d('#__EVENTVALIDATION').attr('value'),
 			"ctl00$cp$Login1$UserName": username,
 			"ctl00$cp$Login1$Password": password,
-			"ctl00$cp$Login1$LoginButton.x": 25,
-			"ctl00$cp$Login1$LoginButton.y": 10
+			"ctl00$cp$Login1$LoginButton": (u'+登++录+').encode('utf-8')
 		}
 
 		try:
@@ -75,50 +79,64 @@ class LessonRobot(object):
 	@coroutine
 	def page_count(self):
 		r = yield self.client.fetch(self.course_list_url, headers=self.session_header)
-		for c in r.headers.get_list('Set-Cookie'):
-			self.cookiejar.load(c)
-		self.load_cookie()
 
-		d = PyQuery(r.body.decode('gb2312', 'ignore'))
-		text = d('[style="float:left;width:40%;"]').text()
-		count = int(text[text.index(u'共')+1:text.index(u'页')])
+		d = PyQuery(r.body.decode('utf-8', 'ignore'))
+		href = d('a.pagesPP').eq(11).attr('href')
+		pattern =  r"'(\d*)'"
+		count = int(re.search(pattern, href).groups(1)[0])
 
 		raise Return(count)
 
 	@coroutine
 	def page(self, page):
-		course_list = []
+		course_table = {}
 
 		def extract_list(i, e):
 			if i > 0:
 				d = PyQuery(e)
 				courseID = int(parse_qs(urlparse(d('a').attr('href')).query)['id'][0])
-				course_list.append(courseID)
+				status = d('td').eq(-2).text()
+				if status == u'已选':
+					status = 2
+				elif status == u'点击进入':
+					status = 0
+				course_table[courseID] = status
+
+		def extract_my(i, e):
+			d = PyQuery(e)
+			courseID = int(parse_qs(urlparse(d('a').attr('href')).query)['id'][0])
+			if courseID in course_table:
+				course_table[courseID] = 1
 
 		first_res, my_res = yield [self.client.fetch(self.course_list_url, headers=self.session_header), self.client.fetch(self.my_url, headers=self.session_header)]
-		d = PyQuery(first_res.body.decode('gb2312', 'ignore'))
+		d = PyQuery(first_res.body.decode('utf-8', 'ignore'))
 
-		body = {
-			'__EVENTTARGET': 'ctl00$ctl00$ctl00$cp$cp$cp$AspNetPager1',
-			'__EVENTARGUMENT': page,
-			'__VIEWSTATE': d('#__VIEWSTATE').attr('value'),
-			'__EVENTVALIDATION': d('#__EVENTVALIDATION').attr('value'),
-			'ctl00$ctl00$ctl00$cp$cp$cp$SearchPortfolio1$ckFinish': 'on'
-		}
-
-		page_res = yield self.client.fetch(self.course_list_url, method='POST', headers=self.session_header, body=urlencode(body))
-		d = PyQuery(page_res.body.decode('gb2312', 'ignore'))
+		#request later page
+		if page != 1:
+			body = {
+				'__EVENTTARGET': 'ctl00$ctl00$ctl00$cp$cp$cp$AspNetPager1',
+				'__EVENTARGUMENT': page,
+				'__VIEWSTATE': d('#__VIEWSTATE').attr('value'),
+				'__EVENTVALIDATION': d('#__EVENTVALIDATION').attr('value')
+			}
+			page_res = yield self.client.fetch(self.course_list_url, method='POST', headers=self.session_header, body=urlencode(body))
+			d = PyQuery(page_res.body.decode('utf-8', 'ignore'))
 
 		#extract_list
 		d('#ctl00_ctl00_ctl00_cp_cp_cp_gvCourse tr').each(extract_list)
 
+		#process myCourse at last
+		d = PyQuery(my_res.body.decode('utf-8', 'ignore'))
+		d('table.table').eq(0).find('tr.table2').each(extract_my)
+
+		course_list = [name for name, value in course_table.iteritems() if value != 2]
 		raise Return(course_list)
 
 	@coroutine
 	def learn(self, courseID):
 		#register
 		r = yield self.client.fetch(self.course_list_url, headers=self.session_header)
-		d = PyQuery(r.body.decode('gb2312', 'ignore'))
+		d = PyQuery(r.body.decode('utf-8', 'ignore'))
 
 		query = {
 			'id': courseID,
@@ -132,9 +150,9 @@ class LessonRobot(object):
 
 		#get username, sid_list and start play
 		r, _ = yield [self.client.fetch(self.course_url + str(courseID), headers=self.session_header), self.client.fetch(self.play_url + str(courseID), headers=self.session_header)]
-		d = PyQuery(r.body.decode('gb2312', 'ignore'))
+		d = PyQuery(r.body.decode('utf-8', 'ignore'))
 
-		sid_list = d('#ctl00_ctl00_ctl00_cp_cp_cp_Panel1 table td:last-child').text().split(' ')
+		sid_list = d('table.table td[colspan="3"] td:last-child').text().split(' ')
 
 		#initParam
 		body = {
@@ -144,7 +162,6 @@ class LessonRobot(object):
 		}
 		yield self.client.fetch(self.progress_url, method='POST', headers=self.session_header, body=urlencode(body))
 
-		#learn all
 		for sid in sid_list:
 			if 'S' in sid:
 				#start one

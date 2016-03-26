@@ -26,7 +26,7 @@ def worker():
 
 		try:
 			robot = LessonRobot()
-			result = yield robot.login(username, '888888')
+			result = yield robot.login(username, '123456')
 			if result:
 				logging.info('[Login] %s' % username)
 				count = yield robot.page_count()
@@ -65,8 +65,10 @@ def worker():
 
 @coroutine
 def spawner():
-	for i in xrange(000000, 001000):
-		username = 'qzce%06d' % i
+	accounts = []
+	with open('accounts.json') as accounts_file:
+		accounts = json.loads(accounts_file.read())
+	for username in accounts:
 		yield q.put(username)
 		logging.info('[Put] %s' % username)
 		yield sleep(1)
