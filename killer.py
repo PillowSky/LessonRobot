@@ -10,7 +10,7 @@ from lessonrobot import LessonRobot
 
 q = Queue()
 concurrency = 10
-filename = 'char_%s_digit_%s.txt' % (sys.argv[1], sys.argv[2])
+filename = 'char_%s_digit_%sshift_%s.txt' % (sys.argv[1], sys.argv[2], sys.argv[3])
 logging.basicConfig(format="%(asctime)s: %(message)s", level=logging.INFO)
 logging.info(filename)
 
@@ -18,9 +18,10 @@ def gen_char(n):
 	for comb in product(string.ascii_lowercase, repeat=n):
 		yield ''.join(comb)
 
-def gen_digit(n):
-	for comb in product(string.digits, repeat=n):
-		yield ''.join(comb)
+def gen_digit(n, s):
+	formatter = '%0' + str(n) + 'd'
+	for i in range(0, 10**n, 10**s):
+		yield formatter % i
 
 @coroutine
 def worker():
@@ -46,7 +47,7 @@ def worker():
 @coroutine
 def spawner():
 	iter_char = gen_char(int(sys.argv[1]))
-	iter_digit = gen_digit(int(sys.argv[2]))
+	iter_digit = gen_digit(int(sys.argv[2]), int(sys.argv[3]))
 
 	for char in iter_char:
 		for digit in iter_digit:
