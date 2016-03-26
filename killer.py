@@ -26,7 +26,7 @@ def worker():
 
 		try:
 			robot = LessonRobot()
-			result = yield robot.login(username, '888888')
+			result = yield robot.login(username, '123')
 			if result:
 				logging.info('[Login] %s' % username)
 				count = yield robot.page_count()
