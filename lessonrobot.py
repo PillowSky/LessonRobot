@@ -9,7 +9,6 @@ from urlparse import parse_qs, urlparse
 from fake_useragent import UserAgent
 from tornado.gen import coroutine, sleep, Return
 from tornado.httpclient import AsyncHTTPClient, HTTPError
-from tornado.ioloop import IOLoop
 
 
 class LessonRobot(object):

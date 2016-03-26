@@ -1,6 +1,7 @@
 import signal
 import logging
 import time
+import json
 from tornado.gen import coroutine, sleep
 from tornado.ioloop import IOLoop
 from tornado.queues import Queue
@@ -66,8 +67,10 @@ def worker():
 
 @coroutine
 def spawner():
-	for i in xrange(200000, 201000):
-		username = 'zjce%06d' % i
+	accounts = []
+	with open('accounts.json') as accounts_file:
+		accounts = json.loads(accounts_file.read())
+	for username in accounts:
 		yield q.put(username)
 		logging.info('[Put] %s' % username)
 		yield sleep(1)
