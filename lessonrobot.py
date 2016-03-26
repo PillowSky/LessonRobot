@@ -108,7 +108,7 @@ class LessonRobot(object):
 		#request later page
 		if page != 1:
 			body = {
-				'__EVENTTARGET': 'ctl10$AspNetPager1',
+				'__EVENTTARGET': 'ctl08$AspNetPager1',
 				'__EVENTARGUMENT': page,
 				'__VIEWSTATE': d('#__VIEWSTATE').attr('value'),
 				'__EVENTVALIDATION': d('#__EVENTVALIDATION').attr('value'),
