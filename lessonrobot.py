@@ -95,7 +95,7 @@ class LessonRobot(object):
 				courseID = int(parse_qs(urlparse(d('a').attr('href')).query)['id'][0])
 				course_list.append(courseID)
 
-		first_res, my_res = yield [self.client.fetch(self.course_list_url, headers=self.session_header), self.client.fetch(self.my_url, headers=self.session_header)]
+		first_res = yield self.client.fetch(self.course_list_url, headers=self.session_header)
 		d = PyQuery(first_res.body.decode('gb2312', 'ignore'))
 
 		body = {
