@@ -10,7 +10,7 @@ from lessonrobot import LessonRobot
 
 q = Queue()
 concurrency = 10
-filename = 'char_%s_digit_%sshift_%s.txt' % (sys.argv[1], sys.argv[2], sys.argv[3])
+filename = 'char_%s_digit_%s_shift_%s.txt' % (sys.argv[1], sys.argv[2], sys.argv[3])
 logging.basicConfig(format="%(asctime)s: %(message)s", level=logging.INFO)
 logging.info(filename)
 
@@ -46,11 +46,8 @@ def worker():
 
 @coroutine
 def spawner():
-	iter_char = gen_char(int(sys.argv[1]))
-	iter_digit = gen_digit(int(sys.argv[2]), int(sys.argv[3]))
-
-	for char in iter_char:
-		for digit in iter_digit:
+	for char in gen_char(int(sys.argv[1])):
+		for digit in gen_digit(int(sys.argv[2]), int(sys.argv[3])):
 			username = char + digit
 			yield q.put(username)
 			yield sleep(0.001)
