@@ -72,6 +72,9 @@ class LessonRobot(object):
 	@coroutine
 	def page_count(self):
 		r = yield self.client.fetch(self.course_list_url, headers=self.session_header)
+		for c in r.headers.get_list('Set-Cookie'):
+			self.cookiejar.load(c)
+		self.load_cookie()
 		d = PyQuery(r.body.decode('utf-8', 'ignore'))
 		text = d('[style="float:left;width:40%;"]').text()
 		count = int(text[text.index(u'共')+1:text.index(u'页')])
@@ -108,8 +111,10 @@ class LessonRobot(object):
 				'__EVENTTARGET': 'ctl00$ctl00$ctl00$cp$cp$cp$AspNetPager1',
 				'__EVENTARGUMENT': page,
 				'__VIEWSTATE': d('#__VIEWSTATE').attr('value'),
+				'__VIEWSTATEGENERATOR': d('__VIEWSTATEGENERATOR').attr('value'),
 				'__EVENTVALIDATION': d('#__EVENTVALIDATION').attr('value')
 			}
+
 			page_res = yield self.client.fetch(self.course_list_url, method='POST', headers=self.session_header, body=urlencode(body))
 			d = PyQuery(page_res.body.decode('utf-8', 'ignore'))
 

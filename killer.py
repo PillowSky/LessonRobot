@@ -30,7 +30,7 @@ def worker():
 			if result:
 				logging.info('[Login] %s' % username)
 				count = yield robot.page_count()
-				for i in xrange(1, count + 1):
+				for i in xrange(count, 0, -1):
 					course_list = yield robot.page(i)
 					course_len = len(course_list)
 					logging.info('[Page] %s: %d/%d => %d' % (username, i, count, course_len))
