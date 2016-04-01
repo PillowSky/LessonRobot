@@ -9,9 +9,9 @@ from tornado.httpclient import AsyncHTTPClient
 from lessonrobot import LessonRobot
 
 concurrency = 10
-q = Queue(maxsize=1000)
+q = Queue()
 
-logging.basicConfig(format="%(asctime)s: %(message)s", level=logging.INFO)
+logging.basicConfig(format="%(asctime)s: %(message)s", level=logging.INFO, filename='shangyu.log')
 AsyncHTTPClient.configure(None, max_clients=1000)
 
 spawn_timestamp = time.time()
