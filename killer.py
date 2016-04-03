@@ -7,10 +7,10 @@ from tornado.queues import Queue
 from tornado.httpclient import AsyncHTTPClient
 from lessonrobot import LessonRobot
 
-concurrency = 10
-q = Queue(maxsize=1000)
+concurrency = 50
+q = Queue()
 
-logging.basicConfig(format="%(asctime)s: %(message)s", level=logging.INFO)
+logging.basicConfig(format="%(asctime)s: %(message)s", level=logging.INFO, filename='shaoxing.log')
 AsyncHTTPClient.configure(None, max_clients=1000)
 
 spawn_timestamp = time.time()
@@ -67,7 +67,7 @@ def worker():
 @coroutine
 def spawner():
 	for i in xrange(200000, 201000):
-		username = 'zjce%06d' % i
+		username = 'sxce%06d' % i
 		yield q.put(username)
 		logging.info('[Put] %s' % username)
 		yield sleep(1)

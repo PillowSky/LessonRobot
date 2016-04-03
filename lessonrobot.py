@@ -1,4 +1,3 @@
-import re
 from Cookie import SimpleCookie
 from datetime import datetime, timedelta
 from pyquery import PyQuery
@@ -13,14 +12,14 @@ from tornado.ioloop import IOLoop
 
 
 class LessonRobot(object):
-	referer_url = 'http://www.zjce.gov.cn'
-	login_url = 'http://www.zjce.gov.cn/login'
-	course_list_url = 'http://www.zjce.gov.cn/course/courseCenterContent'
-	my_course_url = 'http://www.zjce.gov.cn/myspace/mycourse'
-	my_info_url = 'http://www.zjce.gov.cn/myspace/userinfo'
-	course_url = 'http://www.zjce.gov.cn/course/courseContent'
-	play_url = 'http://www.zjce.gov.cn/course/coursePlay'
-	progress_url = 'http://www.zjce.gov.cn/course/courseWarePlayMemory'
+	referer_url = 'http://www.0575study.gov.cn'
+	login_url = 'http://www.0575study.gov.cn/login'
+	course_list_url = 'http://www.0575study.gov.cn/course/courseCenterContent'
+	my_course_url = 'http://www.0575study.gov.cn/myspace/mycourse'
+	my_info_url = 'http://www.0575study.gov.cn/myspace/userinfo'
+	course_url = 'http://www.0575study.gov.cn/course/courseContent'
+	play_url = 'http://www.0575study.gov.cn/course/coursePlay'
+	progress_url = 'http://www.0575study.gov.cn/course/courseWarePlayMemory'
 
 	def __init__(self):
 		super(LessonRobot, self).__init__()
@@ -53,9 +52,7 @@ class LessonRobot(object):
 	def page_count(self):
 		r = yield self.fetch_page(1)
 		d = PyQuery(r.body.decode('utf-8'))
-		text = d('.pags_background a').eq(-2).text()
-		reg = r'\.*(\d*)'
-		count = int(re.search(reg, text).group(1))
+		count = int(d('.con_pagelist a').eq(-2).text())
 
 		raise Return(count)
 
@@ -71,27 +68,27 @@ class LessonRobot(object):
 
 			first_res = yield self.client.fetch(self.my_course_url, headers=self.session_header)
 			d = PyQuery(first_res.body.decode('utf-8'))
-			d('body > .right_content_tab_2').each(extract_my)
+			d('body > li[style]').each(extract_my)
 
-			my_course_count = len(d('.pags_background')) - 1
+			my_course_count = len(d('a[style]'))
 			if my_course_count > 1:
 				batch_res = yield [
 					self.client.fetch(self.my_course_url + '?' + urlencode({'page': i}), headers=self.session_header)
 					for i in range(2, my_course_count + 1)]
 				for r in batch_res:
 					d = PyQuery(r.body.decode('utf-8'))
-					d('body > .right_content_tab_2').each(extract_my)
+					d('body > li[style]').each(extract_my)
 
 		# fetch unlearned course
 		if page != 0:
 			def extract_list(i, e):
 				d = PyQuery(e)
-				course_id = parse_qs(urlparse(d('a').attr('href')).query)['cwAcademyId'][0]
+				course_id = parse_qs(urlparse(d('td > a').attr('href')).query)['cwAcademyId'][0]
 				course_list.append(course_id)
 
 			page_res = yield self.fetch_page(page)
 			d = PyQuery(page_res.body.decode('utf-8'))
-			d('.right_content_tab').each(extract_list)
+			d('.con_item_list li').each(extract_list)
 
 		raise Return(course_list)
 
@@ -105,12 +102,10 @@ class LessonRobot(object):
 
 	@coroutine
 	def learn(self, academyId):
-		# fetch course page and register
-		course_res, play_res = yield [self.client.fetch(self.course_url + '?' + urlencode({'cwAcademyId': academyId}),
-														headers=self.session_header),
-									  self.client.fetch(self.play_url + '?' + urlencode({'cwAcademyId': academyId}),
-														headers=self.session_header)]
+		self.offset = 0
 
+		# fetch course page and register
+		course_res, play_res = yield [self.client.fetch(self.course_url + '?' + urlencode({'cwAcademyId': academyId}), headers=self.session_header), self.client.fetch(self.play_url + '?' + urlencode({'cwAcademyId': academyId}),	headers=self.session_header)]
 		d = PyQuery(play_res.body.decode('utf-8'))
 		qs = parse_qs(urlparse(d('#playframe').attr('src')).query)
 		courseID = qs['courseID'][0]
@@ -131,25 +126,28 @@ class LessonRobot(object):
 
 			@coroutine
 			def learn_section(sid):
+				stime = randrange(60, 100)
 				query = {
 					'method': 'setParam',
 					'lastLocation': 0,
 					'SID': sid,
-					'curtime': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-					'STime': 1,
+					'curtime': (datetime.now() + timedelta(seconds=self.offset)).strftime("%Y-%m-%d %H:%M:%S"),
+					'STime': stime,
 					'state': 'S',
 					'courseID': courseID,
 					'userID': userID
 				}
 				yield self.client.fetch(self.progress_url + '?' + urlencode(query), headers=self.session_header)
-				yield sleep(1)
+
+				yield sleep(60)
+				self.offset += stime - 60
 
 				query = {
 					'method': 'setParam',
-					'lastLocation': randrange(10 ** 7, 10 ** 8),
+					'lastLocation': stime * 1000,
 					'SID': sid,
-					'curtime': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-					'STime': 1,
+					'curtime': (datetime.now() + timedelta(seconds=self.offset)).strftime("%Y-%m-%d %H:%M:%S"),
+					'STime': stime,
 					'state': 'C',
 					'courseID': courseID,
 					'userID': userID
@@ -169,6 +167,7 @@ class LessonRobot(object):
 			for sid, status in section_status:
 				if not status:
 					yield learn_section(sid)
+		'''
 		else:
 			d = PyQuery(course_res.body.decode('utf-8'))
 			section_status = d('.learning_style01, .learning_style02').map(
@@ -207,3 +206,4 @@ class LessonRobot(object):
 			for sid, status in section_status:
 				if not status:
 					yield learn_section(sid)
+		'''
