@@ -91,7 +91,7 @@ def main():
 		IOLoop.current().spawn_callback(worker)
 
 	yield spawner()
-	for i in xrange(1000):
+	for i in xrange(100):
 		yield q.join()
 	logging.info('All Done')
 

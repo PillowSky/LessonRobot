@@ -13,9 +13,6 @@ from urlparse import parse_qs, urlparse
 from fake_useragent import UserAgent
 from tornado.gen import coroutine, sleep, Return
 from tornado.httpclient import AsyncHTTPClient, HTTPError
-from tornado.ioloop import IOLoop
-from tornado.concurrent import run_on_executor
-from concurrent.futures import ThreadPoolExecutor
 
 class LessonRobot(object):
 	referer_url = 'http://www.sygj.org.cn'
@@ -27,7 +24,6 @@ class LessonRobot(object):
 	play_url = 'http://www.sygj.org.cn/play/play.aspx?course_id='
 	progress_url = 'http://www.sygj.org.cn/play/AICCProgressNew.ashx'
 	vcode_url = 'http://www.sygj.org.cn/inc/CodeImg.aspx'
-	executor = ThreadPoolExecutor(max_workers=1)
 
 	def __init__(self):
 		super(LessonRobot, self).__init__()
@@ -43,8 +39,7 @@ class LessonRobot(object):
 		self.username = username
 
 		r = yield self.client.fetch(self.login_url, headers=self.session_header)
-		task = yield self.recognize_vcode(username)
-		vcode = yield task
+		vcode = yield self.recognize_vcode(username)
 
 		d = PyQuery(r.body.decode('utf-8', 'ignore'))
 		body = {
@@ -77,7 +72,6 @@ class LessonRobot(object):
 			self.load_cookie()
 			raise Return(True)
 
-	@run_on_executor
 	@coroutine
 	def recognize_vcode(self, username):
 		while True:
