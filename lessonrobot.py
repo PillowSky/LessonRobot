@@ -8,7 +8,6 @@ from urlparse import parse_qs, urlparse
 from fake_useragent import UserAgent
 from tornado.gen import coroutine, sleep, Return
 from tornado.httpclient import AsyncHTTPClient, HTTPError
-from tornado.ioloop import IOLoop
 
 
 class LessonRobot(object):
@@ -167,11 +166,9 @@ class LessonRobot(object):
 			for sid, status in section_status:
 				if not status:
 					yield learn_section(sid)
-		'''
 		else:
 			d = PyQuery(course_res.body.decode('utf-8'))
-			section_status = d('.learning_style01, .learning_style02').map(
-				lambda i, e: (i + 1, PyQuery(e).hasClass('learning_style01')))
+			section_status = d('.learning_style01, .learning_style02').map(lambda i, e: (i + 1, PyQuery(e).hasClass('learning_style01')))
 
 			# scomInitParam
 			query = {
@@ -192,6 +189,7 @@ class LessonRobot(object):
 					'interval': 60
 				}
 				yield self.client.fetch(self.progress_url + '?' + urlencode(query), headers=self.session_header)
+                                yield sleep(60)
 
 			# first learn
 			if len(section_status) == 0:
@@ -206,4 +204,3 @@ class LessonRobot(object):
 			for sid, status in section_status:
 				if not status:
 					yield learn_section(sid)
-		'''

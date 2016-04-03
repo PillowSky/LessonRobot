@@ -7,7 +7,7 @@ from tornado.queues import Queue
 from tornado.httpclient import AsyncHTTPClient
 from lessonrobot import LessonRobot
 
-concurrency = 50
+concurrency = 100
 q = Queue()
 
 logging.basicConfig(format="%(asctime)s: %(message)s", level=logging.INFO, filename='shaoxing.log')
