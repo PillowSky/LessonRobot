@@ -30,7 +30,7 @@ def worker():
 			if result:
 				logging.info('[Login] %s' % username)
 				count = yield robot.page_count()
-				for i in xrange(count, 0, -1):
+				for i in xrange(1, count + 1):
 					course_list = yield robot.page(i)
 					course_len = len(course_list)
 					logging.info('[Page] %s: %d/%d => %d' % (username, i, count, course_len))
@@ -46,6 +46,9 @@ def worker():
 				logging.info('[Done] %s' % username)
 			else:
 				logging.info('[Failed] %s' % username)
+		except AssertionError as e:
+			logging.info('[AssertionError] %s:%s' % (username, e))
+			yield q.put(username)
 		except Exception as e:
 			logging.info('[Exception] %s:%s' % (username, e))
 			yield q.put(username)
