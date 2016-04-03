@@ -117,8 +117,10 @@ class LessonRobot(object):
 	@coroutine
 	def learn(self, courseID):
 		#register
-		r = yield self.client.fetch(self.course_list_url, headers=self.session_header)
-		d = PyQuery(r.body.decode('gb2312', 'ignore'))
+		try:
+			r = yield self.client.fetch(self.course_list_url, headers=self.session_header, follow_redirects=False)
+		except HTTPError as e:
+			raise AssertionError(e)
 
 		query = {
 			'id': courseID,

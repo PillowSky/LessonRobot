@@ -9,9 +9,9 @@ from tornado.httpclient import AsyncHTTPClient
 from lessonrobot import LessonRobot
 
 concurrency = 10
-q = Queue(maxsize=1000)
+q = Queue()
 
-logging.basicConfig(format="%(asctime)s: %(message)s", level=logging.INFO)
+logging.basicConfig(format="%(asctime)s: %(message)s", level=logging.INFO, filename='quzhou.log')
 AsyncHTTPClient.configure(None, max_clients=1000)
 
 spawn_timestamp = time.time()
@@ -46,6 +46,9 @@ def worker():
 				logging.info('[Done] %s' % username)
 			else:
 				logging.info('[Failed] %s' % username)
+		except AssertionError as e:
+			logging.info('[AssertionError] %s:%s' % (username, e))
+			yield q.put(username)
 		except Exception as e:
 			logging.info('[Exception] %s:%s' % (username, e))
 			yield q.put(username)
