@@ -9,9 +9,9 @@ from tornado.httpclient import AsyncHTTPClient
 from lessonrobot import LessonRobot
 
 concurrency = 10
-q = Queue(maxsize=1000)
+q = Queue()
 
-logging.basicConfig(format="%(asctime)s: %(message)s", level=logging.INFO)
+logging.basicConfig(format="%(asctime)s: %(message)s", level=logging.INFO, filename='jiaxing.log')
 AsyncHTTPClient.configure(None, max_clients=1000)
 
 spawn_timestamp = time.time()
@@ -30,7 +30,7 @@ def worker():
 			if result:
 				logging.info('[Login] %s' % username)
 				count = yield robot.page_count()
-				for i in xrange(1, count + 1):
+				for i in xrange(count, 0, -1):
 					course_list = yield robot.page(i)
 					course_len = len(course_list)
 					logging.info('[Page] %s: %d/%d => %d' % (username, i, count, course_len))

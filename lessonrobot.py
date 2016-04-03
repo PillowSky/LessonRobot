@@ -1,6 +1,7 @@
 # -*- Mode: Python; coding: utf-8; indent-tabs-mode: t; c-basic-offset: 4; tab-width: 4 -*-
 
 import os
+import re
 import string
 import subprocess
 from Cookie import SimpleCookie
@@ -24,6 +25,8 @@ class LessonRobot(object):
 	play_url = 'http://study.hcyjw.cn:8080/play/play.aspx?course_id='
 	progress_url = 'http://study.hcyjw.cn:8080/play/AICCProgressNew.ashx'
 	redirect_url = 'http://study.hcyjw.cn:8080/play/redirect.aspx'
+	play_prefix = 'http://study.hcyjw.cn:8080/play/'
+	scormprogress_url = 'http://study.hcyjw.cn:8080/play/scormprogress.ashx'
 
 	def __init__(self):
 		super(LessonRobot, self).__init__()
@@ -129,9 +132,6 @@ class LessonRobot(object):
 	@coroutine
 	def learn(self, courseID):
 		#register
-		r = yield self.client.fetch(self.course_list_url, headers=self.session_header)
-		d = PyQuery(r.body.decode('gb2312', 'ignore'))
-
 		query = {
 			'id': courseID,
 			'user_id': self.username
@@ -145,42 +145,65 @@ class LessonRobot(object):
 		#get username, sid_list and start play
 		r, _ = yield [self.client.fetch(self.course_url + str(courseID), headers=self.session_header), self.client.fetch(self.play_url + str(courseID), headers=self.session_header)]
 		d = PyQuery(r.body.decode('utf-8', 'ignore'))
+
 		sid_list = d('.table2 table td:last-child').text().split(' ')
+		hours = float(d('.Course_Main_box_body_02 tr:nth-child(4) td.table2').eq(0).text())
 
-		#initParam
-		body = {
-			"method": "initParam",
-			"courseID": courseID,
-			"userID": self.username
-		}
-		yield self.client.fetch(self.progress_url, method='POST', headers=self.session_header, body=urlencode(body))
+		r = yield self.client.fetch(self.play_url + str(courseID), headers=self.session_header)
+		d = PyQuery(r.body.decode('utf-8', 'ignore'))
+		src = d('#playframe').attr('src')
 
-		#learn all
-		for sid in sid_list:
-			if 'S' in sid:
-				#start one
-				body = {
-					'method': 'setParam',
-					'lastLocation': 0,
-					'SID': sid,
-					'curtime': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-					'STime': 1,
-					'state': 'S',
-					'courseID': courseID,
-					'userID': self.username
-				}
-				yield self.client.fetch(self.progress_url, method='POST', headers=self.session_header, body=urlencode(body))
-				yield sleep(1)
+		if 'PlayScorm' in src:
+			r = yield self.client.fetch(self.play_prefix + src, headers=self.session_header)
+			html = r.body.decode('utf-8', 'ignore')
+			pattern = r'url:\s\"(.*)\"'
+			qs = parse_qs(urlparse(re.search(pattern, html).group(1)).query)
 
-				#finish one
-				body = {
-					'method': 'setParam',
-					'lastLocation': 10050,
-					'SID': sid,
-					'curtime': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-					'STime': 1,
-					'state': 'C',
-					'courseID': courseID,
-					'userID': self.username
-				}
-				yield self.client.fetch(self.progress_url, method='POST', headers=self.session_header, body=urlencode(body))
+			query = {
+				'user_id': qs['user_id'][0].strip(),
+				'user_nm': qs['user_nm'][0],
+				'course_id': qs['course_id'][0],
+				'course_number': qs['course_number'][0],
+				'method_name': 'SetValue',
+				'arg_name': 'cmi.core.session_time',
+				'arg_value': str(timedelta(hours=hours))
+			}
+			yield self.client.fetch(self.scormprogress_url + '?' + urlencode(query), headers=self.session_header)
+		else:
+			#initParam
+			body = {
+				"method": "initParam",
+				"courseID": courseID,
+				"userID": self.username
+			}
+			yield self.client.fetch(self.progress_url, method='POST', headers=self.session_header, body=urlencode(body))
+
+			#learn all
+			for sid in sid_list:
+				if 'S' in sid:
+					#start one
+					body = {
+						'method': 'setParam',
+						'lastLocation': 0,
+						'SID': sid,
+						'curtime': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+						'STime': 1,
+						'state': 'S',
+						'courseID': courseID,
+						'userID': self.username
+					}
+					yield self.client.fetch(self.progress_url, method='POST', headers=self.session_header, body=urlencode(body))
+					yield sleep(1)
+
+					#finish one
+					body = {
+						'method': 'setParam',
+						'lastLocation': 10050,
+						'SID': sid,
+						'curtime': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+						'STime': 1,
+						'state': 'C',
+						'courseID': courseID,
+						'userID': self.username
+					}
+					yield self.client.fetch(self.progress_url, method='POST', headers=self.session_header, body=urlencode(body))
