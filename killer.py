@@ -26,26 +26,30 @@ def worker():
 
 		try:
 			robot = LessonRobot()
-			result = yield robot.login(username, '888888')
-			if result:
-				logging.info('[Login] %s' % username)
-				count = yield robot.page_count()
-				for i in xrange(1, count + 1):
-					course_list = yield robot.page(i)
-					course_len = len(course_list)
-					logging.info('[Page] %s: %d/%d => %d' % (username, i, count, course_len))
-					for course in course_list:
-						logging.info('[Learn] %s: %s' % (username, course))
-						yield robot.learn(course)
-					now_timestamp = time.time()
-					if now_timestamp - exception_timestamp > 60 and now_timestamp - spawn_timestamp > 60:
-						concurrency += 1
-						IOLoop.current().spawn_callback(worker)
-						spawn_timestamp = now_timestamp
-						logging.info('[Spawn] concurrency = %d' % concurrency)
-				logging.info('[Done] %s' % username)
-			else:
-				logging.info('[Failed] %s' % username)
+			attempt = 0
+			while attempt < 10:
+				attempt += 1
+				result = yield robot.login(username, '888888')
+				if result:
+					logging.info('[Login] %s' % username)
+					count = yield robot.page_count()
+					for i in xrange(count, 0, -1):
+						course_list = yield robot.page(i)
+						course_len = len(course_list)
+						logging.info('[Page] %s: %d/%d => %d' % (username, i, count, course_len))
+						for course in course_list:
+							logging.info('[Learn] %s: %s' % (username, course))
+							yield robot.learn(course)
+						now_timestamp = time.time()
+						if now_timestamp - exception_timestamp > 60 and now_timestamp - spawn_timestamp > 60:
+							concurrency += 1
+							IOLoop.current().spawn_callback(worker)
+							spawn_timestamp = now_timestamp
+							logging.info('[Spawn] concurrency = %d' % concurrency)
+					logging.info('[Done] %s' % username)
+					break
+				else:
+					logging.info('[Failed] %s' % username)
 		except Exception as e:
 			logging.info('[Exception] %s:%s' % (username, e))
 			yield q.put(username)
@@ -87,7 +91,8 @@ def main():
 		IOLoop.current().spawn_callback(worker)
 
 	yield spawner()
-	yield q.join()
+	for i in xrange(1000):
+		yield q.join()
 	logging.info('All Done')
 
 IOLoop.current().run_sync(main)
