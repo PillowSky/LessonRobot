@@ -189,42 +189,44 @@ class LessonRobot(object):
 		r, _ = yield [self.client.fetch(self.course_url + str(courseID), headers=self.session_header), self.client.fetch(self.play_url + str(courseID), headers=self.session_header)]
 		d = PyQuery(r.body.decode('utf-8', 'ignore'))
 
-		sid_list = d('.table2 table td:last-child').text().split(' ')
-		del sid_list[0]
+		sid_text = d('.table2 table td:last-child').text()
+		if sid_text:
+			sid_list = sid_text.split(' ')
+			del sid_list[0]
 
-		#initParam
-		body = {
-			"method": "initParam",
-			"courseID": courseID,
-			"userID": self.username
-		}
-		yield self.client.fetch(self.progress_url, method='POST', headers=self.session_header, body=urlencode(body))
-
-		#learn all
-		for sid in sid_list:
-			#start one
+			#initParam
 			body = {
-				'method': 'setParam',
-				'lastLocation': 0,
-				'SID': sid,
-				'curtime': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-				'STime': 1,
-				'state': 'S',
-				'courseID': courseID,
-				'userID': self.username
+				"method": "initParam",
+				"courseID": courseID,
+				"userID": self.username
 			}
 			yield self.client.fetch(self.progress_url, method='POST', headers=self.session_header, body=urlencode(body))
-			yield sleep(1)
 
-			#finish one
-			body = {
-				'method': 'setParam',
-				'lastLocation': 10050,
-				'SID': sid,
-				'curtime': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-				'STime': 1,
-				'state': 'C',
-				'courseID': courseID,
-				'userID': self.username
-			}
-			yield self.client.fetch(self.progress_url, method='POST', headers=self.session_header, body=urlencode(body))
+			#learn all
+			for sid in sid_list:
+				#start one
+				body = {
+					'method': 'setParam',
+					'lastLocation': 0,
+					'SID': sid,
+					'curtime': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+					'STime': 1,
+					'state': 'S',
+					'courseID': courseID,
+					'userID': self.username
+				}
+				yield self.client.fetch(self.progress_url, method='POST', headers=self.session_header, body=urlencode(body))
+				yield sleep(1)
+
+				#finish one
+				body = {
+					'method': 'setParam',
+					'lastLocation': 10050,
+					'SID': sid,
+					'curtime': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+					'STime': 1,
+					'state': 'C',
+					'courseID': courseID,
+					'userID': self.username
+				}
+				yield self.client.fetch(self.progress_url, method='POST', headers=self.session_header, body=urlencode(body))
