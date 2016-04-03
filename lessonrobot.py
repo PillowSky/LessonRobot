@@ -136,8 +136,6 @@ class LessonRobot(object):
 		except HTTPError as e:
 			raise AssertionError(e)
 
-		d = PyQuery(r.body.decode('utf-8', 'ignore'))
-
 		query = {
 			'id': courseID,
 			'user_id': self.username
