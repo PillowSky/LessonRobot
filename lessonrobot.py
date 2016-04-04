@@ -199,18 +199,19 @@ class LessonRobot(object):
 			d = PyQuery(r.body.decode('utf-8', 'ignore'))
 			src = d('#playframe').attr('src')
 
-			r = yield self.client.fetch(self.play_prefix + src, headers=self.session_header)
-			html = r.body.decode('utf-8', 'ignore')
-			pattern = r'url:\s\"(.*)\"'
-			qs = parse_qs(urlparse(re.search(pattern, html).group(1)).query)
+			if src and 'PlayScorm' in src:
+				r = yield self.client.fetch(self.play_prefix + src, headers=self.session_header)
+				html = r.body.decode('utf-8', 'ignore')
+				pattern = r'url:\s\"(.*)\"'
+				qs = parse_qs(urlparse(re.search(pattern, html).group(1)).query)
 
-			query = {
-				'user_id': qs['user_id'][0].strip(),
-				'user_nm': qs['user_nm'][0],
-				'course_id': qs['course_id'][0],
-				'course_number': qs['course_number'][0],
-				'method_name': 'SetValue',
-				'arg_name': 'cmi.core.session_time',
-				'arg_value': str(timedelta(hours=hours))
-			}
-			yield self.client.fetch(self.scormprogress_url + '?' + urlencode(query), headers=self.session_header)
+				query = {
+					'user_id': qs['user_id'][0].strip(),
+					'user_nm': qs['user_nm'][0],
+					'course_id': qs['course_id'][0],
+					'course_number': qs['course_number'][0],
+					'method_name': 'SetValue',
+					'arg_name': 'cmi.core.session_time',
+					'arg_value': str(timedelta(hours=hours))
+				}
+				yield self.client.fetch(self.scormprogress_url + '?' + urlencode(query), headers=self.session_header)
