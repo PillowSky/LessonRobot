@@ -49,6 +49,13 @@ def worker():
 		except AssertionError as e:
 			logging.info('[AssertionError] %s:%s' % (username, e))
 			yield q.put(username)
+
+			now_timestamp = time.time()
+			if now_timestamp - exception_timestamp > 60 and now_timestamp - spawn_timestamp > 60:
+				concurrency += 1
+				IOLoop.current().spawn_callback(worker)
+				spawn_timestamp = now_timestamp
+				logging.info('[Spawn] concurrency = %d' % concurrency)
 		except Exception as e:
 			logging.info('[Exception] %s:%s' % (username, e))
 			yield q.put(username)
