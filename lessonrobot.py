@@ -1,5 +1,6 @@
 # -*- Mode: Python; coding: utf-8; indent-tabs-mode: t; c-basic-offset: 4; tab-width: 4 -*-
 
+import re
 from Cookie import SimpleCookie
 from datetime import datetime, timedelta
 from pyquery import PyQuery
@@ -21,6 +22,8 @@ class LessonRobot(object):
 	play_url = 'http://www.hzgb.gov.cn/play/play.aspx?course_id='
 	progress_url = 'http://www.hzgb.gov.cn/play/AICCProgressNew.ashx'
 	redirect_url = 'http://www.hzgb.gov.cn/play/redirect.aspx'
+	play_prefix = 'http://www.hzgb.gov.cn/play/'
+	scormprogress_url = 'http://www.hzgb.gov.cn/play/scormprogress.ashx'
 
 	def __init__(self):
 		super(LessonRobot, self).__init__()
@@ -190,3 +193,24 @@ class LessonRobot(object):
 						'userID': self.username
 					}
 					yield self.client.fetch(self.progress_url, method='POST', headers=self.session_header, body=urlencode(body))
+		else:
+			hours = float(d('tr:nth-child(4) td.table_2').eq(0).text())
+			r = yield self.client.fetch(self.play_url + str(courseID), headers=self.session_header)
+			d = PyQuery(r.body.decode('utf-8', 'ignore'))
+			src = d('#playframe').attr('src')
+
+			r = yield self.client.fetch(self.play_prefix + src, headers=self.session_header)
+			html = r.body.decode('utf-8', 'ignore')
+			pattern = r'url:\s\"(.*)\"'
+			qs = parse_qs(urlparse(re.search(pattern, html).group(1)).query)
+
+			query = {
+				'user_id': qs['user_id'][0].strip(),
+				'user_nm': qs['user_nm'][0],
+				'course_id': qs['course_id'][0],
+				'course_number': qs['course_number'][0],
+				'method_name': 'SetValue',
+				'arg_name': 'cmi.core.session_time',
+				'arg_value': str(timedelta(hours=hours))
+			}
+			yield self.client.fetch(self.scormprogress_url + '?' + urlencode(query), headers=self.session_header)
