@@ -143,14 +143,13 @@ class LessonRobot(object):
 			pass
 
 		#get username, sid_list and start play
-		r, _ = yield [self.client.fetch(self.course_url + str(courseID), headers=self.session_header), self.client.fetch(self.play_url + str(courseID), headers=self.session_header)]
-		d = PyQuery(r.body.decode('utf-8', 'ignore'))
+		course_res, play_res  = yield [self.client.fetch(self.course_url + str(courseID), headers=self.session_header), self.client.fetch(self.play_url + str(courseID), headers=self.session_header)]
+		d = PyQuery(course_res.body.decode('utf-8', 'ignore'))
 
 		sid_list = d('.table2 table td:last-child').text().split(' ')
 		hours = float(d('.Course_Main_box_body_02 tr:nth-child(4) td.table2').eq(0).text())
 
-		r = yield self.client.fetch(self.play_url + str(courseID), headers=self.session_header)
-		d = PyQuery(r.body.decode('utf-8', 'ignore'))
+		d = PyQuery(play_res.body.decode('utf-8', 'ignore'))
 		src = d('#playframe').attr('src')
 
 		if 'PlayScorm' in src:
