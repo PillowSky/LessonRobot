@@ -150,8 +150,8 @@ class LessonRobot(object):
 			pass
 
 		#get username, sid_list and start play
-		r, _ = yield [self.client.fetch(self.course_url + str(courseID), headers=self.session_header), self.client.fetch(self.play_url + str(courseID), headers=self.session_header)]
-		d = PyQuery(r.body.decode('utf-8', 'ignore'))
+		course_res, play_res = yield [self.client.fetch(self.course_url + str(courseID), headers=self.session_header), self.client.fetch(self.play_url + str(courseID), headers=self.session_header)]
+		d = PyQuery(course_res.body.decode('utf-8', 'ignore'))
 
 		sid_text = d('.table_2 table td:last-child').text()
 		if sid_text:
@@ -195,8 +195,7 @@ class LessonRobot(object):
 					yield self.client.fetch(self.progress_url, method='POST', headers=self.session_header, body=urlencode(body))
 		else:
 			hours = float(d('tr:nth-child(4) td.table_2').eq(0).text())
-			r = yield self.client.fetch(self.play_url + str(courseID), headers=self.session_header)
-			d = PyQuery(r.body.decode('utf-8', 'ignore'))
+			d = PyQuery(play_res.body.decode('utf-8', 'ignore'))
 			src = d('#playframe').attr('src')
 
 			if src and 'PlayScorm' in src:
