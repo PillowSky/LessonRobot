@@ -168,6 +168,7 @@ class LessonRobot(object):
 				'arg_value': str(timedelta(hours=hours))
 			}
 			yield self.client.fetch(self.scormprogress_url + '?' + urlencode(query), headers=self.session_header)
+		'''
 		else:
 			#initParam
 			body = {
@@ -206,3 +207,4 @@ class LessonRobot(object):
 						'userID': self.username
 					}
 					yield self.client.fetch(self.progress_url, method='POST', headers=self.session_header, body=urlencode(body))
+		'''
