@@ -25,6 +25,8 @@ class LessonRobot(object):
 	play_url = 'http://jhce.jhxf.gov.cn/play/play.aspx?course_id='
 	progress_url = 'http://jhce.jhxf.gov.cn/play/AICCProgressNew.ashx'
 	redirect_url = 'http://jhce.jhxf.gov.cn/play/redirect.aspx'
+	flv_url = 'http://jhce.jhxf.gov.cn/lessionnew/gc/{}/flv/content{}.flv'
+	flv_referer_url = 'http://jhce.jhxf.gov.cn/lessionnew/gc/{}/control_bar.swf'
 
 	def __init__(self):
 		super(LessonRobot, self).__init__()
@@ -149,10 +151,15 @@ class LessonRobot(object):
 			pass
 
 		#get username, sid_list and start play
-		r, _ = yield [self.client.fetch(self.course_url + str(courseID), headers=self.session_header), self.client.fetch(self.play_url + str(courseID), headers=self.session_header)]
-		d = PyQuery(r.body.decode('utf-8', 'ignore'))
-
+		course_res, play_res = yield [self.client.fetch(self.course_url + str(courseID), headers=self.session_header), self.client.fetch(self.play_url + str(courseID), headers=self.session_header)]
+		d = PyQuery(course_res.body.decode('utf-8', 'ignore'))
 		sid_list = d('table.table td[colspan="3"] td:last-child').text().split(' ')
+
+		d = PyQuery(play_res.body.decode('utf-8', 'ignore'))
+		qs = parse_qs(urlparse(d('#playframe').attr('src')).query)
+		courseName = qs['courseName'][0]
+		flv_header = dict(self.session_header)
+		flv_header['Referer'] = self.flv_referer_url.format(courseName)
 
 		#initParam
 		body = {
@@ -164,6 +171,10 @@ class LessonRobot(object):
 
 		for sid in sid_list:
 			if 'S' in sid:
+				#fetch flv
+				flv_url = self.flv_url.format(courseName, int(sid[1:]))
+				yield self.client.fetch(flv_url, method='HEAD', headers=flv_header, request_timeout=10)
+
 				#start one
 				body = {
 					'method': 'setParam',
@@ -190,3 +201,4 @@ class LessonRobot(object):
 					'userID': self.username
 				}
 				yield self.client.fetch(self.progress_url, method='POST', headers=self.session_header, body=urlencode(body))
+				yield sleep(30)

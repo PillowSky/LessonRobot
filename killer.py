@@ -8,8 +8,8 @@ from tornado.queues import Queue
 from tornado.httpclient import AsyncHTTPClient
 from lessonrobot import LessonRobot
 
-concurrency = 10
-q = Queue(maxsize=1000)
+concurrency = 100
+q = Queue()
 
 logging.basicConfig(format="%(asctime)s: %(message)s", level=logging.INFO)
 AsyncHTTPClient.configure(None, max_clients=1000)
@@ -37,12 +37,13 @@ def worker():
 					for course in course_list:
 						logging.info('[Learn] %s: %s' % (username, course))
 						yield robot.learn(course)
-					now_timestamp = time.time()
-					if now_timestamp - exception_timestamp > 60 and now_timestamp - spawn_timestamp > 60:
-						concurrency += 1
-						IOLoop.current().spawn_callback(worker)
-						spawn_timestamp = now_timestamp
-						logging.info('[Spawn] concurrency = %d' % concurrency)
+
+						now_timestamp = time.time()
+						if now_timestamp - exception_timestamp > 60 and now_timestamp - spawn_timestamp > 60:
+							concurrency += 1
+							IOLoop.current().spawn_callback(worker)
+							spawn_timestamp = now_timestamp
+							logging.info('[Spawn] concurrency = %d' % concurrency)
 				logging.info('[Done] %s' % username)
 			else:
 				logging.info('[Failed] %s' % username)
