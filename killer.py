@@ -11,7 +11,7 @@ from lessonrobot import LessonRobot
 concurrency = 100
 q = Queue()
 
-logging.basicConfig(format="%(asctime)s: %(message)s", level=logging.INFO)
+logging.basicConfig(format="%(asctime)s: %(message)s", level=logging.INFO, filename='jinghua.log')
 AsyncHTTPClient.configure(None, max_clients=1000)
 
 spawn_timestamp = time.time()
