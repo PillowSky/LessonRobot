@@ -1,0 +1,6 @@
+curl "http://vod4.hnce.gov.cn/adl/dwr/call/plaincall/SManager.doQuitSend.dwr" -H "Host: vod4.hnce.gov.cn" -H "User-Agent: Tornado" -H "Referer: http://www.hngbjy.com/" --data "callCount=1&batchId=0&c0-scriptName=SManager&c0-methodName=doQuitSend&c0-id=0&c0-param0=string:1%40032zw&c0-param1=string:mi1507091&c0-param2=string:59%3A59&c0-param3=string:59%3A59"
+
+
+curl "http://vod4.hnce.gov.cn/adl/dwr/call/plaincall/APIDwr.LMSSetValue.dwr" -H "Host: vod4.hnce.gov.cn" -H "User-Agent: Tornado" -H "Referer: http://www.hngbjy.com/" -H "Cookie: JSESSIONID=6E1AC97DD9BF416B843943E182D35E58" --data "callCount=1&page=/adl/LMSFrameDWR.jsp?courseID=zj_20160323&userID=1@032zw&batchId=0&httpSessionId=6E1AC97DD9BF416B843943E182D35E58&scriptSessionId=F93C2D5989E842D01DC22435C0570212446&c0-scriptName=APIDwr&c0-methodName=LMSSetValue&c0-id=0&c0-param0=string:1%40032zw&c0-param1=string:cmi.core.session_time&c0-param2=string:01%3A00%3A20.52"
+
+
